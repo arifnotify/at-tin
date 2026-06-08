@@ -28,10 +28,8 @@ class HomeScreen extends StatelessWidget {
       HomeController(),
     );
 
-    final cartController =
-        Get.put(
-      CartController(),
-    );
+   final cartController =
+    Get.find<CartController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -198,8 +196,13 @@ class HomeScreen extends StatelessWidget {
         },
       ),
 
-bottomNavigationBar: Obx(
-  () => Container(
+bottomNavigationBar: Obx(() {
+
+  print(
+    "HOME TOTAL ITEMS = ${cartController.totalItems}",
+  );
+
+  return Container(
     height: 70,
     decoration: const BoxDecoration(
       color: Colors.white,
@@ -222,40 +225,16 @@ bottomNavigationBar: Obx(
               child: ElevatedButton(
                 onPressed: () {
                   Get.toNamed(
-                          AppRoutes.cart,
-                        );
+                    AppRoutes.cart,
+                  );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Colors.deepPurple,
-                  elevation: 0,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(
-                      12,
-                    ),
-                  ),
-                ),
                 child: Row(
                   mainAxisAlignment:
-                      MainAxisAlignment
-                          .spaceBetween,
+                      MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "Checkout",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
+                    const Text("Checkout"),
                     Text(
                       "৳${cartController.totalPrice} (${cartController.totalItems})",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
                     ),
                   ],
                 ),
@@ -263,47 +242,34 @@ bottomNavigationBar: Obx(
             ),
           ),
 
-        /// Home
         Expanded(
           child: IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.home,
-            ),
+            icon: const Icon(Icons.home),
           ),
         ),
 
-        /// Category
         Expanded(
           child: IconButton(
             onPressed: () {
-              Get.toNamed(
-                "/categories",
-              );
+              Get.toNamed("/categories");
             },
-            icon: const Icon(
-              Icons.grid_view,
-            ),
+            icon: const Icon(Icons.grid_view),
           ),
         ),
 
-        /// Search
         Expanded(
           child: IconButton(
             onPressed: () {
-              Get.toNamed(
-                "/search",
-              );
+              Get.toNamed("/search");
             },
-            icon: const Icon(
-              Icons.search,
-            ),
+            icon: const Icon(Icons.search),
           ),
         ),
       ],
     ),
-  ),
-),
+  );
+}),
     );
   }
 }

@@ -1,8 +1,23 @@
 import 'package:tin/core/network/dio_client.dart';
 
-
 class CartService {
 
+  /// ADD PRODUCT TO SERVER CART
+  Future<void> addToCart(
+    String productId,
+    int quantity,
+  ) async {
+
+    await DioClient.dio.post(
+      "/cart",
+      data: {
+        "productId": productId,
+        "quantity": quantity,
+      },
+    );
+  }
+
+  /// SYNC GUEST CART TO SERVER
   Future<void> syncCart(
     List<Map<String, dynamic>> items,
   ) async {
@@ -15,6 +30,7 @@ class CartService {
     );
   }
 
+  /// GET SERVER CART
   Future<List<dynamic>> getCart() async {
 
     final response =
@@ -25,12 +41,13 @@ class CartService {
     return response.data;
   }
 
-  Future updateQuantity(
+  /// UPDATE CART QUANTITY
+  Future<void> updateQuantity(
     String cartId,
     int quantity,
   ) async {
 
-    return DioClient.dio.patch(
+    await DioClient.dio.patch(
       "/cart/$cartId",
       data: {
         "quantity": quantity,
@@ -38,12 +55,21 @@ class CartService {
     );
   }
 
-  Future removeItem(
+  /// REMOVE CART ITEM
+  Future<void> removeItem(
     String cartId,
   ) async {
 
-    return DioClient.dio.delete(
+    await DioClient.dio.delete(
       "/cart/$cartId",
+    );
+  }
+
+  /// CLEAR ALL CART ITEMS
+  Future<void> clearCart() async {
+
+    await DioClient.dio.delete(
+      "/cart/clear",
     );
   }
 }

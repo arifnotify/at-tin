@@ -3,37 +3,95 @@ import 'package:get/get.dart';
 import 'package:tin/data/models/cart_item_model.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/data/services/cart_service.dart';
+import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
+import 'dart:convert';
+import 'package:get_storage/get_storage.dart';
 
 class CartController extends GetxController {
   final RxList<CartItemModel> cartItems = <CartItemModel>[].obs;
 
   final CartService cartService = CartService();
 
-  /// CLEAR LOCAL CART
-  void clearCart() {
-    cartItems.clear();
-    cartItems.refresh();
-  }
+  final box = GetStorage();
+
+  static const String guestCartKey =
+    "guest_cart";
+
+@override
+void onInit() {
+
+  super.onInit();
+
+  loadGuestCart();
+}
+
+// ...........SaveGuest cart 
+
+Future<void> saveGuestCart() async {
+
+  final data = cartItems
+      .map(
+        (e) => e.toJson(),
+      )
+      .toList();
+
+  await box.write(
+    guestCartKey,
+    data,
+  );
+}
+
+// ..... loadguest cart 
+Future<void> loadGuestCart() async {
+
+  final data =
+      box.read(
+        guestCartKey,
+      );
+
+  if (data == null) return;
+
+  cartItems.value =
+      List<Map<String, dynamic>>
+          .from(data)
+          .map(
+            (e) =>
+                CartItemModel
+                    .fromLocalJson(
+              e,
+            ),
+          )
+          .toList();
+
+  cartItems.refresh();
+}
+
 
   /// SYNC GUEST CART TO SERVER AFTER LOGIN
-  Future<void> syncCartAfterLogin() async {
-    if (cartItems.isEmpty) return;
+Future<void> syncCartAfterLogin() async {
 
-    final items = cartItems.map((e) => {
-          "productId": e.id,
-          "quantity": e.quantity,
-          "price": e.price,
-        }).toList();
+  print("SYNC STARTED");
 
-    try {
-      await cartService.syncCart(items); // Backend API call
-      await loadServerCart();            // Reload server cart to local state
-      print("CART SYNC SUCCESS");
-    } catch (e) {
-      print("SYNC ERROR: $e");
-    }
+  if (cartItems.isEmpty) {
+    await loadServerCart();
+    return;
   }
+
+  final items = cartItems.map((e) => {
+    "productId": e.id,
+    "quantity": e.quantity,
+    "price": e.price,
+  }).toList();
+
+  await cartService.syncCart(items);
+
+  await clearCart();
+
+  await loadServerCart();
+
+  print("CART SYNC SUCCESS");
+}
 
   /// LOAD SERVER CART
 Future<void> loadServerCart() async {
@@ -67,26 +125,78 @@ Future<void> loadServerCart() async {
   }
 
   /// ADD TO CART
-  void addToCart(ProductModel product) {
-    final item = getItem(product.id);
-    if (item != null) {
-      increment(product.id);
-      return;
+Future<void> addToCart(
+  ProductModel product,
+) async {
+
+  final auth =
+      Get.find<AuthController>();
+
+  /// LOGIN USER
+  if (auth.isLoggedIn.value) {
+
+    try {
+
+      await cartService.addToCart(
+        product.id,
+        1,
+      );
+
+      await loadServerCart();
+
+      Get.snackbar(
+        "Success",
+        "Product added to cart",
+      );
+
+    } catch (e) {
+
+      Get.snackbar(
+        "Error",
+        e.toString(),
+      );
     }
 
-    final newItem = CartItemModel(
-      id: product.id,
-      title: product.title,
-      image: product.images.isNotEmpty ? product.images.first : "",
-      price: product.currentPrice,
-      originalPrice: product.price,
-      quantity: 1,
-    );
-
-    cartItems.add(newItem);
-    cartItems.refresh();
-    _autoHide(newItem);
+    return;
   }
+
+  /// GUEST USER
+
+  final item =
+      getItem(product.id);
+
+  if (item != null) {
+
+    increment(product.id);
+
+    return;
+  }
+
+  final newItem =
+      CartItemModel(
+    id: product.id,
+    cartId: null,
+    title: product.title,
+    image: product.images.isNotEmpty
+        ? product.images.first
+        : "",
+    price: product.currentPrice,
+    originalPrice: product.price,
+    quantity: 1,
+  );
+
+  cartItems.add(
+    newItem,
+  );
+
+  cartItems.refresh();
+
+  await saveGuestCart();
+
+  _autoHide(
+    newItem,
+  );
+}
 
   /// INCREMENT
   void increment(String id) {
@@ -96,6 +206,7 @@ Future<void> loadServerCart() async {
     item.quantity++;
     item.isEditing = true;
     cartItems.refresh();
+    saveGuestCart();
     _autoHide(item);
   }
 
@@ -108,12 +219,14 @@ Future<void> loadServerCart() async {
       item.timer?.cancel();
       cartItems.remove(item);
       cartItems.refresh();
+      saveGuestCart();
       return;
     }
 
     item.quantity--;
     item.isEditing = true;
     cartItems.refresh();
+    saveGuestCart();
     _autoHide(item);
   }
 
@@ -140,10 +253,18 @@ Future<void> loadServerCart() async {
   }
 
   /// REMOVE ITEM
-  void removeItem(String id) {
-    cartItems.removeWhere((e) => e.id == id);
-    cartItems.refresh();
-  }
+Future<void> removeItem(
+  String id,
+) async {
+
+  cartItems.removeWhere(
+    (e) => e.id == id,
+  );
+
+  cartItems.refresh();
+
+  await saveGuestCart();
+}
 
   /// TOTAL ITEMS
   int get totalItems =>
@@ -198,5 +319,26 @@ Future<void> decreaseServerQty(
   }
 
   await loadServerCart();
+}
+
+
+/// CLEAR LOCAL CART
+Future<void> clearCart() async {
+
+  print(
+    "Before Clear: ${cartItems.length}",
+  );
+
+  cartItems.clear();
+
+  cartItems.refresh();
+
+  await box.remove(
+    guestCartKey,
+  );
+
+  print(
+    "After Clear: ${cartItems.length}",
+  );
 }
 }

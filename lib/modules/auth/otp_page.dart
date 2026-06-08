@@ -59,33 +59,29 @@ class OtpPage
               height: 20,
             ),
 
-            SizedBox(
+              Obx(
+                () => SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: controller.isLoading.value
+                        ? null
+                        : () async {
 
-              width:
-                  double.infinity,
+                            await controller.verifyOtp(
+                              phone: phone,
+                              otp: otpController.text,
+                            );
+                          },
 
-              height: 55,
-
-              child:
-                  ElevatedButton(
-
-                onPressed: () {
-
-                  controller
-                      .verifyOtp(
-                    phone: phone,
-                    otp:
-                        otpController
-                            .text,
-                  );
-                },
-
-                child:
-                    const Text(
-                  "Verify OTP",
+                    child: controller.isLoading.value
+                        ? const CircularProgressIndicator()
+                        : const Text(
+                            "Verify OTP",
+                          ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

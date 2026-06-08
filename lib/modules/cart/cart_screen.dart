@@ -205,12 +205,25 @@ class CartPage extends StatelessWidget {
                                           .min,
                                   children: [
                                     GestureDetector(
-                                      onTap: () {
-                                        cartController
-                                            .decrement(
+                                      onTap: () async {
+                                      final auth =
+                                          Get.find<AuthController>();
+
+                                      if (auth.isLoggedIn.value) {
+
+                                        await cartController
+                                            .decreaseServerQty(
+                                          item.cartId!,
+                                          item.quantity,
+                                        );
+
+                                      } else {
+
+                                        cartController.decrement(
                                           item.id,
                                         );
-                                      },
+                                      }
+                                    },
                                       child:
                                           const Icon(
                                         Icons.remove,
@@ -240,12 +253,26 @@ class CartPage extends StatelessWidget {
                                     ),
 
                                     GestureDetector(
-                                      onTap: () {
-                                        cartController
-                                            .increment(
-                                          item.id,
-                                        );
-                                      },
+                                      onTap: () async {
+
+                                          final auth =
+                                              Get.find<AuthController>();
+
+                                          if (auth.isLoggedIn.value) {
+
+                                            await cartController
+                                                .increaseServerQty(
+                                              item.cartId!,
+                                              item.quantity,
+                                            );
+
+                                          } else {
+
+                                            cartController.increment(
+                                              item.id,
+                                            );
+                                          }
+                                        },
                                       child:
                                           const Icon(
                                         Icons.add,
@@ -269,13 +296,24 @@ class CartPage extends StatelessWidget {
                                   .end,
                           children: [
                             GestureDetector(
-                              onTap: () {
-                                while (cartController
-                                        .getItem(
-                                            item.id) !=
-                                    null) {
-                                  cartController
-                                      .decrement(
+                              onTap: () async {
+                                final auth =
+                                    Get.find<AuthController>();
+
+                                if (auth.isLoggedIn.value) {
+
+                                  await cartController
+                                      .cartService
+                                      .removeItem(
+                                    item.cartId!,
+                                  );
+
+                                  await cartController
+                                      .loadServerCart();
+
+                                } else {
+
+                                  cartController.removeItem(
                                     item.id,
                                   );
                                 }

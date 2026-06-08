@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/data/services/order_service.dart';
+import 'package:tin/modules/cart/cart_controller.dart';
 
 
 class OrderController
@@ -12,33 +13,27 @@ class OrderController
   RxBool isLoading =
       false.obs;
 
-  Future<void> placeOrder(
-    String addressId,
-  ) async {
+Future<void> placeOrder(String addressId) async {
 
-    try {
+  try {
 
-      isLoading.value =
-          true;
+    isLoading.value = true;
 
-      await service
-          .createOrder(
-        addressId,
-      );
+    await service.createOrder(addressId);
 
-      Get.offAllNamed(AppRoutes.ordersuccess);
+    await Get.find<CartController>().clearCart();
 
-    } catch (e) {
+    Get.offAllNamed(
+      AppRoutes.ordersuccess,
+    );
 
-      Get.snackbar(
-        "Error",
-        e.toString(),
-      );
+  } catch (e) {
 
-    } finally {
+    Get.snackbar("Error", e.toString());
 
-      isLoading.value =
-          false;
-    }
+  } finally {
+
+    isLoading.value = false;
   }
+}
 }

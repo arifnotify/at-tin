@@ -26,14 +26,16 @@ class AuthController
     checkLogin();
   }
 
-  void checkLogin() {
+Future<void> checkLogin() async {
+  final token = box.read("token");
 
-    final token =
-        box.read("token");
+  isLoggedIn.value = token != null;
 
-    isLoggedIn.value =
-        token != null;
+  if (isLoggedIn.value) {
+    await Get.find<CartController>()
+        .loadServerCart();
   }
+}
 
   Future sendOtp(
     String phone,
@@ -61,32 +63,61 @@ class AuthController
   }
 
 
-Future verifyOtp({required String phone, required String otp}) async {
+Future verifyOtp({
+  required String phone,
+  required String otp,
+}) async {
+   print("VERIFY OTP CALLED");
+
   try {
+
     isLoading.value = true;
 
-    final data = await service.verifyOtp(phone: phone, otp: otp);
+    final data =
+        await service.verifyOtp(
+      phone: phone,
+      otp: otp,
+    );
 
-    box.write("token", data["token"] ?? data["access_token"]);
+    box.write(
+      "token",
+      data["token"] ??
+          data["access_token"],
+    );
+
     isLoggedIn.value = true;
 
-    /// 🔹 Sync Guest Cart to Server
-    final cartController = Get.find<CartController>();
-    await cartController.syncCartAfterLogin();
-    await Get.find<CartController>().loadServerCart();
+    final cartController =
+        Get.find<CartController>();
 
-    /// 🔹 Go to Address Page
-    Get.toNamed( "/address",);
+    /// Guest Cart → Server Cart
+    await cartController .syncCartAfterLogin();
+
+    /// Go Address Page
+    Get.offAllNamed(
+      "/address",
+    );
+
+  } catch (e) {
+
+    Get.snackbar(
+      "Error",
+      e.toString(),
+    );
+
   } finally {
+
     isLoading.value = false;
   }
 }
 
-  void logout() {
+ void logout() {
 
-    box.remove("token");
+  box.remove("token");
 
-    isLoggedIn.value =
-        false;
-  }
+  Get.find<CartController>()
+      .clearCart();
+
+  isLoggedIn.value = false;
+}
 }

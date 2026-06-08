@@ -96,6 +96,9 @@ class ProductCard extends StatelessWidget {
                               cartController.getItem(
                             product.id,
                           );
+                          print(
+    "PRODUCT: ${product.title} => ${item?.quantity}",
+  );
 
                           /// ADD BUTTON
                           if (item == null) {
