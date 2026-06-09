@@ -63,51 +63,42 @@ Future<void> checkLogin() async {
   }
 
 
-Future verifyOtp({
+Future<void> verifyOtp({
   required String phone,
   required String otp,
 }) async {
-   print("VERIFY OTP CALLED");
+  print("VERIFY OTP CALLED");
 
   try {
-
     isLoading.value = true;
 
-    final data =
-        await service.verifyOtp(
+    final data = await service.verifyOtp(
       phone: phone,
       otp: otp,
     );
 
-    box.write(
-      "token",
-      data["token"] ??
-          data["access_token"],
-    );
-
+    // Token সেভ
+    box.write("token", data["token"] ?? data["access_token"]);
     isLoggedIn.value = true;
 
-    final cartController =
-        Get.find<CartController>();
+    final cartController = Get.find<CartController>();
 
-    /// Guest Cart → Server Cart
-    await cartController .syncCartAfterLogin();
+    // Guest Cart → Server Cart sync
+    await cartController.syncCartAfterLogin();
 
-    /// Go Address Page
-    Get.offAllNamed(
-      "/address",
-    );
+    isLoading.value = false;
+
+    // ================== সরল লজিক ==================
+    Get.offAllNamed('/home');
+    // ===============================================
 
   } catch (e) {
-
+    isLoading.value = false;
     Get.snackbar(
       "Error",
       e.toString(),
+      snackPosition: SnackPosition.BOTTOM,
     );
-
-  } finally {
-
-    isLoading.value = false;
   }
 }
 

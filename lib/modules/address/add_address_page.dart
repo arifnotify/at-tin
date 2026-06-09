@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'address_controller.dart';
+import 'pin_drop_screen.dart';
 
-class AddAddressPage
-    extends StatefulWidget {
-
+class AddAddressPage extends StatefulWidget {
   const AddAddressPage({
     super.key,
   });
 
   @override
-  State<AddAddressPage>
-      createState() =>
-          _AddAddressPageState();
+  State<AddAddressPage> createState() =>
+      _AddAddressPageState();
 }
 
 class _AddAddressPageState
-    extends State<
-        AddAddressPage> {
+    extends State<AddAddressPage> {
 
   final fullNameController =
       TextEditingController();
@@ -26,23 +24,24 @@ class _AddAddressPageState
   final phoneController =
       TextEditingController();
 
-  final divisionController =
+  final villageController =
       TextEditingController();
 
-  final districtController =
+  final landmarkController =
       TextEditingController();
 
-  final areaController =
-      TextEditingController();
-
-  final addressController =
+  final noteController =
       TextEditingController();
 
   bool isDefault = false;
 
+  double? latitude;
+  double? longitude;
+
   @override
   Widget build(
-      BuildContext context) {
+    BuildContext context,
+  ) {
 
     final controller =
         Get.find<AddressController>();
@@ -50,8 +49,7 @@ class _AddAddressPageState
     return Scaffold(
 
       appBar: AppBar(
-        title:
-            const Text(
+        title: const Text(
           "Add Address",
         ),
       ),
@@ -65,8 +63,12 @@ class _AddAddressPageState
 
         child: Column(
 
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
           children: [
 
+            /// FULL NAME
             TextField(
               controller:
                   fullNameController,
@@ -74,86 +76,222 @@ class _AddAddressPageState
                   const InputDecoration(
                 labelText:
                     "Full Name",
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(
-              height: 12,
+              height: 15,
             ),
 
+            /// PHONE
             TextField(
               controller:
                   phoneController,
+              keyboardType:
+                  TextInputType.phone,
               decoration:
                   const InputDecoration(
                 labelText:
                     "Phone Number",
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(
-              height: 12,
+              height: 15,
             ),
 
+            /// VILLAGE / AREA
             TextField(
               controller:
-                  divisionController,
+                  villageController,
               decoration:
                   const InputDecoration(
                 labelText:
-                    "Division",
+                    "Village / Area",
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(
-              height: 12,
+              height: 15,
             ),
 
+            /// LANDMARK
             TextField(
               controller:
-                  districtController,
+                  landmarkController,
               decoration:
                   const InputDecoration(
                 labelText:
-                    "District",
+                    "Landmark",
+                hintText:
+                    "Mosque, School, Market",
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(
-              height: 12,
+              height: 15,
             ),
 
+            /// DIRECTION NOTE
             TextField(
               controller:
-                  areaController,
-              decoration:
-                  const InputDecoration(
-                labelText:
-                    "Area",
-              ),
-            ),
-
-            const SizedBox(
-              height: 12,
-            ),
-
-            TextField(
-              controller:
-                  addressController,
+                  noteController,
               maxLines: 3,
               decoration:
                   const InputDecoration(
                 labelText:
-                    "Address Line",
+                    "Direction Note",
+                hintText:
+                    "Red house beside pond",
+                border:
+                    OutlineInputBorder(),
               ),
             ),
 
+            const SizedBox(
+              height: 20,
+            ),
+
+            /// LOCATION BUTTON
+            SizedBox(
+
+              width:
+                  double.infinity,
+
+              height: 55,
+
+              child:
+                  ElevatedButton.icon(
+
+                icon: const Icon(
+                  Icons.location_on,
+                ),
+
+                label: Text(
+
+                  latitude == null
+
+                      ? "Select Location"
+
+                      : "Location Selected",
+                ),
+
+                onPressed:
+                    () async {
+
+                  final LatLng?
+                      result =
+                      await Get.to<
+                          LatLng>(
+                    () =>
+                        const PinDropScreen(),
+                  );
+
+                  if (result !=
+                      null) {
+
+                    setState(() {
+
+                      latitude =
+                          result
+                              .latitude;
+
+                      longitude =
+                          result
+                              .longitude;
+                    });
+                  }
+                },
+              ),
+            ),
+
+            const SizedBox(
+              height: 15,
+            ),
+
+            /// SELECTED LOCATION INFO
+            if (latitude != null)
+
+              Container(
+
+                width:
+                    double.infinity,
+
+                padding:
+                    const EdgeInsets
+                        .all(
+                  12,
+                ),
+
+                decoration:
+                    BoxDecoration(
+
+                  color: Colors
+                      .green
+                      .shade50,
+
+                  borderRadius:
+                      BorderRadius.circular(
+                    10,
+                  ),
+                ),
+
+                child: Column(
+
+                  crossAxisAlignment:
+                      CrossAxisAlignment
+                          .start,
+
+                  children: [
+
+                    const Text(
+                      "Selected Location",
+                      style:
+                          TextStyle(
+                        fontWeight:
+                            FontWeight
+                                .bold,
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 6,
+                    ),
+
+                    Text(
+                      "Latitude: $latitude",
+                    ),
+
+                    Text(
+                      "Longitude: $longitude",
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(
+              height: 20,
+            ),
+
+            /// DEFAULT ADDRESS
             CheckboxListTile(
+
               value:
                   isDefault,
-              onChanged: (
-                value,
-              ) {
+
+              contentPadding:
+                  EdgeInsets.zero,
+
+              onChanged:
+                  (value) {
 
                 setState(() {
 
@@ -162,15 +300,17 @@ class _AddAddressPageState
                           false;
                 });
               },
+
               title: const Text(
-                "Default Address",
+                "Set as Default Address",
               ),
             ),
 
             const SizedBox(
-              height: 20,
+              height: 25,
             ),
 
+            /// SAVE BUTTON
             SizedBox(
 
               width:
@@ -183,6 +323,71 @@ class _AddAddressPageState
 
                 onPressed:
                     () async {
+
+                  if (fullNameController
+                      .text
+                      .trim()
+                      .isEmpty) {
+
+                    Get.snackbar(
+                      "Error",
+                      "Enter Full Name",
+                    );
+
+                    return;
+                  }
+
+                  if (phoneController
+                      .text
+                      .trim()
+                      .isEmpty) {
+
+                    Get.snackbar(
+                      "Error",
+                      "Enter Phone Number",
+                    );
+
+                    return;
+                  }
+
+                  if (villageController
+                      .text
+                      .trim()
+                      .isEmpty) {
+
+                    Get.snackbar(
+                      "Error",
+                      "Enter Village / Area",
+                    );
+
+                    return;
+                  }
+
+                  if (landmarkController
+                      .text
+                      .trim()
+                      .isEmpty) {
+
+                    Get.snackbar(
+                      "Error",
+                      "Enter Landmark",
+                    );
+
+                    return;
+                  }
+
+                  if (latitude ==
+                          null ||
+                      longitude ==
+                          null) {
+
+                    Get.snackbar(
+                      "Location Required",
+                      "Please select your location",
+                    );
+
+                    return;
+                  }
 
                   await controller
                       .createAddress(
@@ -197,25 +402,26 @@ class _AddAddressPageState
                             .text
                             .trim(),
 
-                    division:
-                        divisionController
+                    areaOrVillage:
+                        villageController
                             .text
                             .trim(),
 
-                    district:
-                        districtController
+                    landmark:
+                        landmarkController
                             .text
                             .trim(),
 
-                    area:
-                        areaController
+                    directionNote:
+                        noteController
                             .text
                             .trim(),
 
-                    addressLine:
-                        addressController
-                            .text
-                            .trim(),
+                    latitude:
+                        latitude!,
+
+                    longitude:
+                        longitude!,
 
                     isDefault:
                         isDefault,
@@ -232,5 +438,21 @@ class _AddAddressPageState
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+
+    fullNameController.dispose();
+
+    phoneController.dispose();
+
+    villageController.dispose();
+
+    landmarkController.dispose();
+
+    noteController.dispose();
+
+    super.dispose();
   }
 }

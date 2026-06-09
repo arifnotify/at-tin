@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
 
 import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/home/appdrawer/app_drawer.dart';
 import 'package:tin/modules/home/home_controller.dart';
 import 'package:tin/modules/location/location_bottom_sheet.dart';
 import 'package:tin/modules/location/location_controller.dart';
@@ -32,64 +33,57 @@ class HomeScreen extends StatelessWidget {
     Get.find<CartController>();
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
+  endDrawer: AppDrawer(),
 
-        title: Obx(
-          () => InkWell(
-            onTap: () {
-              Get.bottomSheet(
-                const LocationBottomSheet(),
-                backgroundColor:
-                    Colors.white,
-                isScrollControlled:
-                    true,
-              );
-            },
-            child: Row(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.location_on,
-                  color:
-                      Colors.deepPurple,
-                  size: 20,
-                ),
+  appBar: AppBar(
+    elevation: 0,
 
-                const SizedBox(
-                  width: 5,
-                ),
-
-                Text(
-                  locationController
-                      .currentLocation,
-                  style:
-                      const TextStyle(
-                    fontSize: 16,
-                    fontWeight:
-                        FontWeight.w600,
-                  ),
-                ),
-
-                const Icon(
-                  Icons
-                      .keyboard_arrow_down,
-                ),
-              ],
+    title: Obx(
+      () => InkWell(
+        onTap: () {
+          Get.bottomSheet(
+            const LocationBottomSheet(),
+            backgroundColor: Colors.white,
+            isScrollControlled: true,
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.location_on,
+              color: Colors.deepPurple,
+              size: 20,
             ),
-          ),
+            const SizedBox(width: 5),
+            Text(
+              locationController.currentLocation,
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down,
+            ),
+          ],
         ),
+      ),
+    ),
 
-        actions: [
-          IconButton(
-            onPressed: () {},
+    actions: [
+      Builder(
+        builder: (context) {
+          return IconButton(
+            onPressed: () {
+              Scaffold.of(context)
+                  .openEndDrawer();
+            },
             icon: const Icon(
               Icons.menu,
             ),
-          ),
-        ],
+          );
+        },
       ),
+    ],
+  ),
+
 
       body: Obx(
         () {
@@ -196,13 +190,8 @@ class HomeScreen extends StatelessWidget {
         },
       ),
 
-bottomNavigationBar: Obx(() {
-
-  print(
-    "HOME TOTAL ITEMS = ${cartController.totalItems}",
-  );
-
-  return Container(
+bottomNavigationBar: Obx(
+  () => Container(
     height: 70,
     decoration: const BoxDecoration(
       color: Colors.white,
@@ -228,13 +217,29 @@ bottomNavigationBar: Obx(() {
                     AppRoutes.cart,
                   );
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Checkout"),
+                    const Text(
+                      "Checkout",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Text(
                       "৳${cartController.totalPrice} (${cartController.totalItems})",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -242,13 +247,17 @@ bottomNavigationBar: Obx(() {
             ),
           ),
 
+        /// Home
         Expanded(
           child: IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Get.toNamed("/");
+            },
             icon: const Icon(Icons.home),
           ),
         ),
 
+        /// Category
         Expanded(
           child: IconButton(
             onPressed: () {
@@ -258,6 +267,7 @@ bottomNavigationBar: Obx(() {
           ),
         ),
 
+        /// Search
         Expanded(
           child: IconButton(
             onPressed: () {
@@ -268,8 +278,8 @@ bottomNavigationBar: Obx(() {
         ),
       ],
     ),
-  );
-}),
+  ),
+),
     );
   }
 }

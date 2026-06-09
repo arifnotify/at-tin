@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:tin/core/network/dio_client.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/home/appdrawer/drawer_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
 
 import 'core/routes/app_pages.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
    Get.put(AuthController(), permanent: true);
   Get.put(CartController(), permanent: true);
   Get.put(LocationController(), permanent: true);
+  Get.put(DrawerControllerX(), permanent: true);
 
 
   runApp(

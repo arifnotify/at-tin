@@ -5,7 +5,6 @@ import 'package:tin/data/models/product_model.dart';
 import 'package:tin/data/services/cart_service.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
-import 'dart:convert';
 import 'package:get_storage/get_storage.dart';
 
 class CartController extends GetxController {
@@ -144,10 +143,6 @@ Future<void> addToCart(
 
       await loadServerCart();
 
-      Get.snackbar(
-        "Success",
-        "Product added to cart",
-      );
 
     } catch (e) {
 
@@ -199,36 +194,55 @@ Future<void> addToCart(
 }
 
   /// INCREMENT
-  void increment(String id) {
-    final item = getItem(id);
-    if (item == null) return;
+void increment(String id) async {
+  final auth = Get.find<AuthController>();
+  final item = getItem(id);
+  if (item == null) return;
 
-    item.quantity++;
-    item.isEditing = true;
-    cartItems.refresh();
-    saveGuestCart();
-    _autoHide(item);
+  item.quantity++;
+  item.isEditing = true;
+  cartItems.refresh();
+
+  if (auth.isLoggedIn.value) {
+    await cartService.updateQuantity(
+      item.cartId!,
+      item.quantity,
+    );
+    await loadServerCart();
+  } else {
+    await saveGuestCart();
   }
+
+  _autoHide(item);
+}
 
   /// DECREMENT
-  void decrement(String id) {
-    final item = getItem(id);
-    if (item == null) return;
+void decrement(String id) async {
+  final auth = Get.find<AuthController>();
+  final item = getItem(id);
+  if (item == null) return;
 
-    if (item.quantity <= 1) {
-      item.timer?.cancel();
-      cartItems.remove(item);
-      cartItems.refresh();
-      saveGuestCart();
-      return;
-    }
-
-    item.quantity--;
-    item.isEditing = true;
-    cartItems.refresh();
-    saveGuestCart();
-    _autoHide(item);
+  if (item.quantity <= 1) {
+    await removeItem(id);
+    return;
   }
+
+  item.quantity--;
+  item.isEditing = true;
+  cartItems.refresh();
+
+  if (auth.isLoggedIn.value) {
+    await cartService.updateQuantity(
+      item.cartId!,
+      item.quantity,
+    );
+    await loadServerCart();
+  } else {
+    await saveGuestCart();
+  }
+
+  _autoHide(item);
+}
 
   /// SHOW CONTROL
   void showControls(String id) {
@@ -253,17 +267,21 @@ Future<void> addToCart(
   }
 
   /// REMOVE ITEM
-Future<void> removeItem(
-  String id,
-) async {
+Future<void> removeItem(String id) async {
+  final auth = Get.find<AuthController>();
 
-  cartItems.removeWhere(
-    (e) => e.id == id,
-  );
+  final item = getItem(id);
+  if (item == null) return;
+
+  if (auth.isLoggedIn.value && item.cartId != null) {
+    await cartService.removeItem(item.cartId!);
+    await loadServerCart();
+  } else {
+    cartItems.removeWhere((e) => e.id == id);
+    await saveGuestCart();
+  }
 
   cartItems.refresh();
-
-  await saveGuestCart();
 }
 
   /// TOTAL ITEMS

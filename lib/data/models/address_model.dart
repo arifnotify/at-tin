@@ -1,14 +1,14 @@
 class AddressModel {
   final String id;
-
   final String fullName;
   final String phoneNumber;
 
-  final String division;
-  final String district;
+  final String areaOrVillage;
+  final String landmark;
+  final String? directionNote;
 
-  final String area;
-  final String addressLine;
+  final double latitude;
+  final double longitude;
 
   final bool isDefault;
 
@@ -16,10 +16,11 @@ class AddressModel {
     required this.id,
     required this.fullName,
     required this.phoneNumber,
-    required this.division,
-    required this.district,
-    required this.area,
-    required this.addressLine,
+    required this.areaOrVillage,
+    required this.landmark,
+    this.directionNote,
+    required this.latitude,
+    required this.longitude,
     required this.isDefault,
   });
 
@@ -27,24 +28,21 @@ class AddressModel {
     Map<String, dynamic> json,
   ) {
     return AddressModel(
-      id: json["_id"] ?? "",
+      id: json["_id"],
+      fullName: json["fullName"],
+      phoneNumber: json["phoneNumber"],
 
-      fullName: json["fullName"] ?? "",
+      areaOrVillage: json["areaOrVillage"],
+      landmark: json["landmark"],
+      directionNote: json["directionNote"],
 
-      phoneNumber:
-          json["phoneNumber"] ?? "",
+      latitude:
+          (json["latitude"] ?? 0)
+              .toDouble(),
 
-      division:
-          json["division"] ?? "",
-
-      district:
-          json["district"] ?? "",
-
-      area:
-          json["area"] ?? "",
-
-      addressLine:
-          json["addressLine"] ?? "",
+      longitude:
+          (json["longitude"] ?? 0)
+              .toDouble(),
 
       isDefault:
           json["isDefault"] ?? false,
