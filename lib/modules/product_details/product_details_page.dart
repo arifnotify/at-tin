@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/core/routes/app_routes.dart';
@@ -16,6 +17,7 @@ class _ProductDetailsPageState
     extends State<ProductDetailsPage> {
   late ProductModel product;
   late CartController cartController;
+  final lang = Get.find<LanguageController>();
 
   int quantity = 0;
   int currentImage = 0;
@@ -64,11 +66,16 @@ class _ProductDetailsPageState
         elevation: 0,
         iconTheme:
             const IconThemeData(color: Colors.black),
-        title: Text(
-          product.title,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
+        title: Obx(
+          () => Text(
+            lang.isBangla
+                ? product.titleBn
+                : product.titleEn,
+
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -151,14 +158,18 @@ class _ProductDetailsPageState
                     CrossAxisAlignment.start,
                 children: [
 
-                  Text(
-                    product.title,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight:
-                          FontWeight.bold,
+                  Obx(
+                      () => Text(
+                        lang.isBangla
+                            ? product.titleBn
+                            : product.titleEn,
+
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 10),
 
@@ -321,12 +332,16 @@ class _ProductDetailsPageState
 
                   const SizedBox(height: 20),
 
-                  Text(
-                    product.description,
-                    style: TextStyle(
-                      color:
-                          Colors.grey.shade700,
-                      height: 1.5,
+                  Obx(
+                    () => Text(
+                      lang.isBangla
+                          ? product.descriptionBn
+                          : product.descriptionEn,
+
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                 ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tin/modules/address/address_controller.dart';
 
+import 'address_controller.dart';
 import 'add_address_page.dart';
 
 class AddressPage extends StatelessWidget {
@@ -69,14 +69,19 @@ class AddressPage extends StatelessWidget {
                     const EdgeInsets.all(
                   12,
                 ),
-                itemCount: controller
-                    .addresses.length,
+                itemCount:
+                    controller
+                        .addresses
+                        .length,
                 itemBuilder:
-                    (context, index) {
-
+                    (
+                  context,
+                  index,
+                ) {
                   final address =
                       controller
-                          .addresses[index];
+                              .addresses[
+                          index];
 
                   return Obx(() {
                     return Card(
@@ -85,7 +90,6 @@ class AddressPage extends StatelessWidget {
                               .only(
                         bottom: 12,
                       ),
-
                       child:
                           RadioListTile<
                               String>(
@@ -110,13 +114,15 @@ class AddressPage extends StatelessWidget {
                           children: [
 
                             Expanded(
-                              child: Text(
+                              child:
+                                  Text(
                                 address
                                     .fullName,
                                 style:
                                     const TextStyle(
                                   fontWeight:
-                                      FontWeight.bold,
+                                      FontWeight
+                                          .bold,
                                 ),
                               ),
                             ),
@@ -152,6 +158,143 @@ class AddressPage extends StatelessWidget {
                                   ),
                                 ),
                               ),
+
+                            PopupMenuButton<
+                                String>(
+                              onSelected:
+                                  (
+                                value,
+                              ) async {
+                                if (value ==
+                                    "edit") {
+                                  Get.to(
+                                    () =>
+                                        AddAddressPage(
+                                      address:
+                                          address,
+                                    ),
+                                  );
+                                }
+
+                                if (value ==
+                                    "delete") {
+                                  final result =
+                                      await Get.dialog<
+                                          bool>(
+                                    AlertDialog(
+                                      title:
+                                          const Text(
+                                        "Delete Address",
+                                      ),
+                                      content:
+                                          const Text(
+                                        "Are you sure you want to delete this address?",
+                                      ),
+                                      actions: [
+
+                                        TextButton(
+                                          onPressed:
+                                              () {
+                                            Get.back(
+                                              result:
+                                                  false,
+                                            );
+                                          },
+                                          child:
+                                              const Text(
+                                            "Cancel",
+                                          ),
+                                        ),
+
+                                        ElevatedButton(
+                                          onPressed:
+                                              () {
+                                            Get.back(
+                                              result:
+                                                  true,
+                                            );
+                                          },
+                                          child:
+                                              const Text(
+                                            "Delete",
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (result ==
+                                      true) {
+                                    controller
+                                        .deleteAddress(
+                                      address.id,
+                                    );
+                                  }
+                                }
+                              },
+
+                              itemBuilder:
+                                  (
+                                context,
+                              ) =>
+                                  [
+
+                                const PopupMenuItem(
+                                  value:
+                                      "edit",
+                                  child:
+                                      Row(
+                                    children: [
+
+                                      Icon(
+                                        Icons
+                                            .edit,
+                                      ),
+
+                                      SizedBox(
+                                        width:
+                                            8,
+                                      ),
+
+                                      Text(
+                                        "Edit",
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const PopupMenuItem(
+                                  value:
+                                      "delete",
+                                  child:
+                                      Row(
+                                    children: [
+
+                                      Icon(
+                                        Icons
+                                            .delete,
+                                        color:
+                                            Colors.red,
+                                      ),
+
+                                      SizedBox(
+                                        width:
+                                            8,
+                                      ),
+
+                                      Text(
+                                        "Delete",
+                                        style:
+                                            TextStyle(
+                                          color:
+                                              Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
 
@@ -193,12 +336,12 @@ class AddressPage extends StatelessWidget {
                                 "📍 ${address.landmark}",
                               ),
 
-                              if (address
-                                      .directionNote !=
-                                  null &&
+                              if (address.directionNote !=
+                                      null &&
                                   address
                                       .directionNote!
                                       .isNotEmpty)
+
                                 Padding(
                                   padding:
                                       const EdgeInsets.only(
@@ -220,18 +363,19 @@ class AddressPage extends StatelessWidget {
                                         .selectedAddress
                                         .value
                                         ?.id ==
-                                    address.id
+                                    address
+                                        .id
                                 ? const Icon(
                                     Icons
                                         .check_circle,
-                                    color: Colors
-                                        .green,
+                                    color:
+                                        Colors.green,
                                   )
                                 : const Icon(
                                     Icons
                                         .location_on,
-                                    color: Colors
-                                        .red,
+                                    color:
+                                        Colors.red,
                                   ),
                       ),
                     );
@@ -250,7 +394,8 @@ class AddressPage extends StatelessWidget {
                 width:
                     double.infinity,
                 height: 55,
-                child: ElevatedButton(
+                child:
+                    ElevatedButton(
                   style:
                       ElevatedButton
                           .styleFrom(
@@ -258,19 +403,16 @@ class AddressPage extends StatelessWidget {
                         Colors
                             .deepPurple,
                   ),
-
-                  onPressed: () {
-
+                  onPressed:
+                      () {
                     if (controller
                             .selectedAddress
                             .value ==
                         null) {
-
                       Get.snackbar(
                         "Error",
                         "Please select an address",
                       );
-
                       return;
                     }
 
@@ -278,13 +420,15 @@ class AddressPage extends StatelessWidget {
                       "/order-summary",
                     );
                   },
-
-                  child: const Text(
+                  child:
+                      const Text(
                     "Continue",
-                    style: TextStyle(
+                    style:
+                        TextStyle(
                       color:
                           Colors.white,
-                      fontSize: 16,
+                      fontSize:
+                          16,
                     ),
                   ),
                 ),

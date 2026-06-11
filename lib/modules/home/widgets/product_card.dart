@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart';
 import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
@@ -15,6 +16,7 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
+    final lang = Get.find<LanguageController>();
 
     final currentPrice = product.currentPrice;
     final hasDiscount = product.hasDiscount;
@@ -342,17 +344,19 @@ class ProductCard extends StatelessWidget {
                 const SizedBox(height: 6),
 
                 /// TITLE
-                Text(
-                  product.title,
+                Obx(() {
+                return Text(
+                  lang.isBangla
+                      ? product.titleBn
+                      : product.titleEn,
                   maxLines: 2,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight:
-                        FontWeight.w500,
+                    fontWeight: FontWeight.w500,
                   ),
-                ),
+                );
+              }),
 
                 const Spacer(),
 

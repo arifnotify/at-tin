@@ -1,7 +1,8 @@
 class ProductModel {
   final String id;
-  final String title;
-  final String description;
+
+  final Map<String, dynamic> title;
+  final Map<String, dynamic> description;
 
   final double price;
   final double? discountPrice;
@@ -10,7 +11,6 @@ class ProductModel {
   final List<String> images;
   final String? unit;
 
-  // NEW
   final String? productType;
   final String? freshText;
   final String? expiryText;
@@ -24,8 +24,6 @@ class ProductModel {
     this.flashSalePrice,
     required this.images,
     this.unit,
-
-    // NEW
     this.productType,
     this.freshText,
     this.expiryText,
@@ -36,10 +34,24 @@ class ProductModel {
   ) {
     return ProductModel(
       id: json['_id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
 
-      price: (json['price'] ?? 0).toDouble(),
+      title:
+          json['title'] != null
+              ? Map<String, dynamic>.from(
+                json['title'],
+              )
+              : {},
+
+      description:
+          json['description'] != null
+              ? Map<String, dynamic>.from(
+                json['description'],
+              )
+              : {},
+
+      price:
+          (json['price'] ?? 0)
+              .toDouble(),
 
       discountPrice:
           json['discountPrice'] != null
@@ -53,27 +65,44 @@ class ProductModel {
                   .toDouble()
               : null,
 
-      images: json['images'] != null
-          ? List<String>.from(
-              json['images'],
-            )
-          : [],
+      images:
+          json['images'] != null
+              ? List<String>.from(
+                json['images'],
+              )
+              : [],
 
-          unit: json['unit'] ?? '',
+      unit: json['unit'] ?? '',
 
-         productType:
-              json['productType'] ?? 'regular',
+      productType:
+          json['productType'] ??
+          'regular',
 
-          freshText:
-              json['freshText'] ?? '',
+      freshText:
+          json['freshText'] ?? '',
 
-          expiryText:
-              json['expiryText'] ?? '',
+      expiryText:
+          json['expiryText'] ?? '',
     );
   }
 
-  /// Current Selling Price
+  // English Title
+  String get titleEn =>
+      title['en'] ?? '';
 
+  // Bangla Title
+  String get titleBn =>
+      title['bn'] ?? '';
+
+  // English Description
+  String get descriptionEn =>
+      description['en'] ?? '';
+
+  // Bangla Description
+  String get descriptionBn =>
+      description['bn'] ?? '';
+
+  /// Current Selling Price
   double get currentPrice {
     if (flashSalePrice != null &&
         flashSalePrice! > 0) {

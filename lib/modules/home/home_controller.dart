@@ -6,101 +6,70 @@ import 'package:tin/data/services/home_service.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 
 class HomeController extends GetxController {
-  final HomeService service =
-      HomeService();
+  final HomeService service = HomeService();
 
-  RxBool isLoading =
-      false.obs;
+  RxBool isLoading = false.obs;
 
-  RxList<BannerModel>
-      banners =
-      <BannerModel>[].obs;
+  RxList<BannerModel> banners = <BannerModel>[].obs;
 
-  RxList<CategoryModel>
-      categories =
-      <CategoryModel>[].obs;
+  RxList<CategoryModel> categories = <CategoryModel>[].obs;
 
-  RxList<ProductModel>
-      products =
-      <ProductModel>[].obs;
+  RxList<ProductModel> products = <ProductModel>[].obs;
 
   @override
   void onInit() {
     super.onInit();
-    
-  Get.find<CartController>()
-      .loadServerCart();
+
+    Get.find<CartController>().loadServerCart();
 
     loadHomeData();
   }
 
-  Future<void>
-      loadHomeData() async {
+  Future<void> loadHomeData() async {
     try {
-      isLoading.value =
-          true;
+      isLoading.value = true;
 
-      final bannerData =
-          await service
-              .getBanners();
+      /// =========================
+      /// BANNERS
+      /// =========================
+      final bannerData = await service.getBanners();
 
+      banners.value = (bannerData as List)
+          .map((e) => BannerModel.fromJson(e))
+          .toList();
+
+      /// =========================
+      /// 🔥 IMPORTANT CHANGE HERE
+      /// MAIN CATEGORIES ONLY
+      /// =========================
       final categoryData =
-          await service
-              .getCategories();
+          await service.getMainCategories(); // ❗ FIXED
 
-      final productData =
-          await service
-              .getProducts();
+      categories.value = (categoryData as List)
+          .map((e) => CategoryModel.fromJson(e))
+          .toList();
 
-      banners.value =
-          (bannerData as List)
-              .map<BannerModel>(
-                (e) =>
-                    BannerModel
-                        .fromJson(
-                  e,
-                ),
-              )
-              .toList();
+      /// =========================
+      /// PRODUCTS
+      /// =========================
+      final productData = await service.getProducts();
 
-      categories.value =
-          (categoryData as List)
-              .map<CategoryModel>(
-                (e) =>
-                    CategoryModel
-                        .fromJson(
-                  e,
-                ),
-              )
-              .toList();
-
-      products.value =
-          (productData as List)
-              .map<ProductModel>(
-                (e) =>
-                    ProductModel
-                        .fromJson(
-                  e,
-                ),
-              )
-              .toList();
+      products.value = (productData as List)
+          .map((e) => ProductModel.fromJson(e))
+          .toList();
     } catch (e) {
-      print(
-        "Home Load Error: $e",
-      );
+      print("Home Load Error: $e");
 
       Get.snackbar(
         "Error",
         "Failed to load home data",
       );
     } finally {
-      isLoading.value =
-          false;
+      isLoading.value = false;
     }
   }
 
-  Future<void>
-      refreshHome() async {
+  Future<void> refreshHome() async {
     await loadHomeData();
   }
 }

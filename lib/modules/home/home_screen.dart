@@ -132,14 +132,16 @@ class HomeScreen extends StatelessWidget {
                   ),
 
                   /// Categories
-                  if (homeController
-                      .categories
-                      .isNotEmpty)
-                    CategoryGrid(
-                      categories:
-                          homeController
-                              .categories,
-                    ),
+                  
+                    Obx(() {
+                      if (homeController.isLoading.value) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      return CategoryGrid(
+                        categories: homeController.categories,
+                      );
+                    }),
 
                   const SizedBox(
                     height: 20,

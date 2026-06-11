@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart';
 import 'package:tin/data/models/cart_item_model.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/data/services/cart_service.dart';
@@ -9,6 +10,7 @@ import 'package:get_storage/get_storage.dart';
 
 class CartController extends GetxController {
   final RxList<CartItemModel> cartItems = <CartItemModel>[].obs;
+  final lang = Get.find<LanguageController>();
 
   final CartService cartService = CartService();
 
@@ -171,7 +173,9 @@ Future<void> addToCart(
       CartItemModel(
     id: product.id,
     cartId: null,
-    title: product.title,
+    title: lang.isBangla
+      ? product.titleBn
+      : product.titleEn,
     image: product.images.isNotEmpty
         ? product.images.first
         : "",
