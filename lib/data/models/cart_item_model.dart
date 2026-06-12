@@ -1,30 +1,29 @@
 import 'dart:async';
+import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart';
 
 class CartItemModel {
-  /// PRODUCT ID
   final String id;
-
-  /// SERVER CART DOCUMENT ID
   final String? cartId;
 
-  final String title;
+  /// 🔥 MULTI LANGUAGE SUPPORT (IMPORTANT FIX)
+  final String titleBn;
+  final String titleEn;
 
   final String image;
 
   final num price;
-
   final num originalPrice;
 
   int quantity;
-
   bool isEditing;
-
   Timer? timer;
 
   CartItemModel({
     required this.id,
     this.cartId,
-    required this.title,
+    required this.titleBn,
+    required this.titleEn,
     required this.image,
     required this.price,
     required this.originalPrice,
@@ -33,67 +32,89 @@ class CartItemModel {
     this.timer,
   });
 
-  /// SERVER CART JSON
-  factory CartItemModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
-    final product = json["product"];
+  /// 🟢 GET LOCALIZED TITLE (BEST PRACTICE)
+  String get localizedTitle {
+    final lang = Get.find<LanguageController>();
+    return lang.isBangla ? titleBn : titleEn;
+  }
+
+  /// ================= SERVER CART JSON =================
+  factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    final product = json["product"] is Map
+        ? Map<String, dynamic>.from(json["product"])
+        : <String, dynamic>{};
+
+    final titleMap = product["title"] is Map
+        ? Map<String, dynamic>.from(product["title"])
+        : <String, dynamic>{};
+
+    // ================= PRICE FIX =================
+    final basePrice = product["price"] ?? 0;
+    final discountPrice = product["discountPrice"];
+    final flashPrice = product["flashSalePrice"];
+
+    num finalPrice = basePrice;
+
+    if (flashPrice != null && flashPrice > 0) {
+      finalPrice = flashPrice;
+    } else if (discountPrice != null && discountPrice > 0) {
+      finalPrice = discountPrice;
+    }
+    // ============================================
+
+    String imageUrl = "";
+
+    if (product["images"] is List &&
+        product["images"].isNotEmpty) {
+      imageUrl = product["images"][0].toString();
+    }
 
     return CartItemModel(
-      /// Cart Document ID
-      cartId: json["_id"],
+      cartId: json["_id"]?.toString(),
+      id: product["_id"]?.toString() ?? "",
 
-      /// Product ID
-      id: product["_id"] ?? "",
+      /// 🔥 FIXED: KEEP BOTH LANGUAGES
+      titleBn: titleMap["bn"] ?? "",
+      titleEn: titleMap["en"] ?? "",
 
-      title: product["title"] ?? "",
+      image: imageUrl,
 
-      image: product["images"] != null &&
-              product["images"] is List &&
-              product["images"].isNotEmpty
-          ? product["images"][0]
-          : "",
-
-      price: json["price"] ?? 0,
-
-      originalPrice: product["price"] ?? 0,
+      price: finalPrice,
+      originalPrice: basePrice,
 
       quantity: json["quantity"] ?? 1,
-
       isEditing: false,
     );
   }
 
-  /// LOCAL STORAGE JSON
-  factory CartItemModel.fromLocalJson(
-    Map<String, dynamic> json,
-  ) {
+  /// ================= LOCAL STORAGE JSON =================
+  factory CartItemModel.fromLocalJson(Map<String, dynamic> json) {
     return CartItemModel(
       id: json["id"] ?? "",
-
       cartId: json["cartId"],
 
-      title: json["title"] ?? "",
+      /// 🔥 FIXED
+      titleBn: json["titleBn"] ?? "",
+      titleEn: json["titleEn"] ?? "",
 
       image: json["image"] ?? "",
-
       price: json["price"] ?? 0,
-
-      originalPrice:
-          json["originalPrice"] ?? 0,
-
+      originalPrice: json["originalPrice"] ?? 0,
       quantity: json["quantity"] ?? 1,
-
       isEditing: false,
     );
   }
 
-  /// SAVE TO LOCAL STORAGE
+  /// ================= SAVE TO LOCAL STORAGE =================
   Map<String, dynamic> toJson() {
     return {
       "id": id,
       "cartId": cartId,
-      "title": title,
+
+      /// 🔥 FIXED
+      "titleBn": titleBn,
+      "titleEn": titleEn,
+
       "image": image,
       "price": price,
       "originalPrice": originalPrice,
@@ -101,11 +122,12 @@ class CartItemModel {
     };
   }
 
-  /// COPY WITH
+  /// ================= COPY WITH =================
   CartItemModel copyWith({
     String? id,
     String? cartId,
-    String? title,
+    String? titleBn,
+    String? titleEn,
     String? image,
     num? price,
     num? originalPrice,
@@ -116,11 +138,11 @@ class CartItemModel {
     return CartItemModel(
       id: id ?? this.id,
       cartId: cartId ?? this.cartId,
-      title: title ?? this.title,
+      titleBn: titleBn ?? this.titleBn,
+      titleEn: titleEn ?? this.titleEn,
       image: image ?? this.image,
       price: price ?? this.price,
-      originalPrice:
-          originalPrice ?? this.originalPrice,
+      originalPrice: originalPrice ?? this.originalPrice,
       quantity: quantity ?? this.quantity,
       isEditing: isEditing ?? this.isEditing,
       timer: timer ?? this.timer,

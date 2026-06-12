@@ -169,25 +169,23 @@ Future<void> addToCart(
     return;
   }
 
-  final newItem =
-      CartItemModel(
-    id: product.id,
-    cartId: null,
-    title: lang.isBangla
-      ? product.titleBn
-      : product.titleEn,
-    image: product.images.isNotEmpty
-        ? product.images.first
-        : "",
-    price: product.currentPrice,
-    originalPrice: product.price,
-    quantity: 1,
-  );
+final newItem = CartItemModel(
+  id: product.id,
+  cartId: null,
 
-  cartItems.add(
-    newItem,
-  );
+  titleBn: product.titleBn,
+  titleEn: product.titleEn,
 
+  image: product.images.isNotEmpty
+      ? product.images.first
+      : "",
+
+  price: product.currentPrice,
+  originalPrice: product.price,
+  quantity: 1,
+);
+
+cartItems.add(newItem);
   cartItems.refresh();
 
   await saveGuestCart();

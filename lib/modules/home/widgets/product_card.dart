@@ -361,55 +361,55 @@ class ProductCard extends StatelessWidget {
                 const Spacer(),
 
                 /// BOTTOM
-               /// BOTTOM
-Row(
-  children: [
-    /// UNIT (LEFT SIDE)
-    Text(
-      product.unit?.isNotEmpty == true
-          ? product.unit!
-          : "1 pcs",
-      style: TextStyle(
-        color: Colors.grey.shade600,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
+                              /// BOTTOM
+                Row(
+                  children: [
+                    /// UNIT (LEFT SIDE)
+                    Text(
+                      product.unit?.isNotEmpty == true
+                          ? product.unit!
+                          : "1 pcs",
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
 
-    const Spacer(),
+                    const Spacer(),
 
-    /// ICON + TEXT (RIGHT SIDE)
-    Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          product.productType == "fresh"
-              ? Icons.access_time
-              : Icons.event,
-          size: 14,
-          color: product.productType == "fresh"
-              ? Colors.green
-              : Colors.orange,
-        ),
+                    /// ICON + TEXT (RIGHT SIDE)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          product.productType == "fresh"
+                              ? Icons.access_time
+                              : Icons.event,
+                          size: 14,
+                          color: product.productType == "fresh"
+                              ? Colors.green
+                              : Colors.orange,
+                        ),
 
-        const SizedBox(width: 4),
+                        const SizedBox(width: 4),
 
-        Text(
-          product.productType == "fresh"
-              ? (product.freshText ?? "Fresh")
-              : (product.expiryText ?? ""),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style:  TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
-  ],
-)
+                        Text(
+                          product.productType == "fresh"
+                              ? (product.freshText ?? "Fresh")
+                              : (product.expiryText ?? ""),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:  TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
               ],
             ),
           ),

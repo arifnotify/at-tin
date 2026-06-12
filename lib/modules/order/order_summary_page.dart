@@ -210,7 +210,7 @@ class OrderSummaryPage extends StatelessWidget {
                     ),
 
                     title: Text(
-                      item.title,
+                      item.localizedTitle,
                     ),
 
                     subtitle:

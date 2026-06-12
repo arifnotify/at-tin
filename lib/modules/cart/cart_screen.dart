@@ -140,7 +140,7 @@ class CartPage extends StatelessWidget {
                                     .start,
                             children: [
                               Text(
-                                item.title,
+                                item.localizedTitle,
                                 maxLines: 2,
                                 overflow:
                                     TextOverflow
