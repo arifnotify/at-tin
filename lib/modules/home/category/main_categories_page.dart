@@ -1,26 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
-import 'package:tin/data/models/category_model.dart';
+import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/home/category/category_controller.dart';
+import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
 
-class CategoryGrid extends StatelessWidget {
-  final List<CategoryModel> categories;
-  final VoidCallback? onAllCategoriesPressed;
+class AllCategoriesPage extends StatefulWidget {
+   const AllCategoriesPage({super.key});
 
-  const CategoryGrid({
-    super.key,
-    required this.categories,
-    this.onAllCategoriesPressed,
-  });
+  @override
+  State<AllCategoriesPage> createState() => _AllCategoriesPageState();
+}
+
+class _AllCategoriesPageState extends State<AllCategoriesPage> {
+  final controller = Get.put(CategoryController());
+  final CartController cartController = Get.find<CartController>();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.loadMainCategories(); // শুধু main categories
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: categories.length,
+    return Scaffold(
+      appBar: AppBar(title: const Text("All Categories")),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: controller.categories.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 12,
@@ -28,7 +41,7 @@ class CategoryGrid extends StatelessWidget {
             childAspectRatio: 1.45,
           ),
           itemBuilder: (context, index) {
-            final category = categories[index];
+            final category = controller.categories[index];
 
             return GestureDetector(
               onTap: () {
@@ -45,13 +58,6 @@ class CategoryGrid extends StatelessWidget {
                     Image.network(
                       category.image,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          size: 40,
-                        ),
-                      ),
                     ),
 
                     Container(
@@ -68,16 +74,13 @@ class CategoryGrid extends StatelessWidget {
                     ),
 
                     Positioned(
-                      left: 12,
-                      right: 12,
-                      bottom: 12,
+                      bottom: 10,
+                      left: 10,
+                      right: 10,
                       child: Text(
                         category.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -87,18 +90,16 @@ class CategoryGrid extends StatelessWidget {
               ),
             );
           },
-        ),
+          
 
-        const SizedBox(height: 20),
-
-        TextButton(
-          onPressed: onAllCategoriesPressed ??
-              () {
-                Get.toNamed(AppRoutes.allCategories);
-              },
-          child: const Text("All Categories"),
+        );
+      }
+      
+      ),
+      bottomNavigationBar: AppBottomNavBar(
+      cartController: cartController,
         ),
-      ],
+      
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tin/core/routes/app_routes.dart';
+import 'package:tin/controller/language_controller.dart';
 
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/appdrawer/app_drawer.dart';
@@ -32,6 +32,8 @@ class HomeScreen extends StatelessWidget {
 
    final cartController =
     Get.find<CartController>();
+    
+   final lang = Get.find<LanguageController>();
 
     return Scaffold(
   endDrawer: AppDrawer(),
@@ -150,8 +152,9 @@ class HomeScreen extends StatelessWidget {
 
                   /// Popular Products
                   ProductSection(
-                    title:
-                        "Popular Products",
+                    title: lang.currentLanguage.value == "bn"
+                            ? "জনপ্রয় পণ্য"
+                            : "Popular Products",
                     products:
                         homeController
                             .products,
@@ -161,13 +164,13 @@ class HomeScreen extends StatelessWidget {
                     height: 20,
                   ),
 
-                  /// Flash Sale
                   ProductSection(
-                    title:
-                        "Flash Sale",
-                    products:
-                        homeController
-                            .products,
+                    title: lang.currentLanguage.value == "bn"
+                            ? "সল্প মূল্যে"
+                            : "flash sale",
+                    products: homeController.products
+                        .where((p) => p.isFlashSale)
+                        .toList(),
                   ),
 
                   const SizedBox(
@@ -176,15 +179,45 @@ class HomeScreen extends StatelessWidget {
 
                   /// Fresh Products
                   ProductSection(
-                    title:
-                        "Fresh Vegetables",
-                    products:
-                        homeController
-                            .products,
+                    title: lang.currentLanguage.value == "bn"
+                            ? "তাজা পণ্য"
+                            : "fresh product",
+                    products: homeController.products
+                        .where((p) => p.productType == "fresh")
+                        .toList(),
+                  ),
+                  
+                  const SizedBox(
+                    height: 20,
+                  ),
+
+                  /// regular Products
+                  ProductSection(
+                    title: lang.currentLanguage.value == "bn"
+                            ? "সবসময় এ পণ্য "
+                            : "regular product",
+                    products: homeController.products
+                        .where((p) => p.productType == "regular")
+                        .toList(),
                   ),
 
                   const SizedBox(
                     height: 20,
+                  ),
+                  
+                  ProductSection(
+                      title: lang.currentLanguage.value == "bn"
+                            ? "ফল"
+                            : "Fruits",
+                    products: homeController.products
+                        .where(
+                          (p) =>
+                              p.categoryName
+                                  .toLowerCase() ==
+                              "fruits",
+                        )
+                        .toList(),
+                        
                   ),
                 ],
               ),

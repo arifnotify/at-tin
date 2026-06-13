@@ -60,14 +60,8 @@ class ProductSection
                   itemCount:
                       products.length,
 
-                  itemBuilder:
-                      (
-                    context,
-                    index,
-                  ) {
-
-                    return ProductCard(
-                      product:
+                  itemBuilder: (context,index,) {
+                     return ProductCard(product:
                           products[index],
                     );
                   },

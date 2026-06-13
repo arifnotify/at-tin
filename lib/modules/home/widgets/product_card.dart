@@ -77,15 +77,18 @@ class ProductCard extends StatelessWidget {
                               borderRadius:
                                   BorderRadius.circular(4),
                             ),
-                            child: const Text(
-                              "FLASH SALE",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
+                            child: Obx(() {
+                              return Text(
+                                lang.currentLanguage.value == "bn"
+                                    ? "স্বল্প মূল্যে"
+                                    : "FLASH",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            }),
                           ),
                         ),
 

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:tin/core/bindings/search_binding.dart';
 import 'package:tin/core/routes/app_routes.dart';
 
 import 'package:tin/modules/address/address_page.dart';
@@ -6,11 +7,13 @@ import 'package:tin/modules/auth/auth_binding.dart';
 import 'package:tin/modules/auth/login_page.dart';
 import 'package:tin/modules/auth/otp_page.dart';
 import 'package:tin/modules/cart/cart_screen.dart';
+import 'package:tin/modules/home/category/main_categories_page.dart';
 import 'package:tin/modules/home/category/sub_category.dart';
 import 'package:tin/modules/home/home_screen.dart';
 import 'package:tin/modules/order/order_success_page.dart';
 import 'package:tin/modules/order/order_summary_page.dart';
 import 'package:tin/modules/product_details/product_details_page.dart';
+import 'package:tin/modules/search/search_screen.dart';
 import 'package:tin/modules/splash/splash_binding.dart';
 import 'package:tin/modules/splash/splash_screen.dart';
 
@@ -68,5 +71,19 @@ class AppPages {
       name: AppRoutes.subCategory,
       page: () => SubCategoryPage(),
     ),
+
+      GetPage(
+      name: AppRoutes.allCategories,
+      page: () => const AllCategoriesPage(),
+    ),
+
+    GetPage(
+  name:
+      AppRoutes.search,
+  page: () =>
+      SearchScreen(),
+  binding:
+      SearchBinding(),
+),
   ];
 }

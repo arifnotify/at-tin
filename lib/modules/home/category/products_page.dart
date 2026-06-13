@@ -7,19 +7,18 @@ import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
 import 'package:tin/modules/home/widgets/product_card.dart';
 
 class ProductsPage extends StatelessWidget {
-  //ProductsPage({super.key});
-
-  final CategoryService service = CategoryService();
-  final CartController cartController = Get.find<CartController>();
-    final String title;
-
-  final List<ProductModel>
-      products;
- ProductsPage({
+  ProductsPage({
     super.key,
     required this.title,
     required this.products,
   });
+
+  final String title;
+  final List<ProductModel> products;
+
+  final CategoryService service = CategoryService();
+  final CartController cartController =
+      Get.find<CartController>();
 
   @override
   Widget build(BuildContext context) {
@@ -27,18 +26,22 @@ class ProductsPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      /// APP BAR
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         title: Text(
-          subCategory["name"] ?? "",
+          subCategory["name"] ?? title,
           style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w500,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
+
+      /// BODY
       body: FutureBuilder(
         future: service.getProductsByCategory(
           subCategory["_id"],
@@ -53,56 +56,52 @@ class ProductsPage extends StatelessWidget {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                snapshot.error.toString(),
-              ),
+              child: Text(snapshot.error.toString()),
             );
           }
 
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData ||
+              (snapshot.data as List).isEmpty) {
             return const Center(
               child: Text("No Products Found"),
             );
           }
 
-          final products = snapshot.data as List;
+          final products =
+              snapshot.data as List;
 
-          if (products.isEmpty) {
-            return const Center(
-              child: Text("No Products Found"),
-            );
-          }
-
+          /// GRID VIEW (FIXED 3 COLUMN SAFE)
           return GridView.builder(
             padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 16,
+              horizontal: 8,
+              vertical: 12,
             ),
             itemCount: products.length,
             gridDelegate:
                 const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 18,
-              childAspectRatio: 0.52,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.50,
             ),
             itemBuilder: (context, index) {
-              final json = products[index];
-              print("🔍 Product $index: $json"); // এখানে productType আছে কিনা দেখুন
+              final product =
+                  ProductModel.fromJson(
+                products[index],
+              );
 
-              final product = ProductModel.fromJson(json);
-              print("Product Type: ${product.productType}");
-              print("freshText = ${product.freshText}");
-              print("expiryText = ${product.expiryText}");
-
-              return ProductCard(product: product);
+              return ProductCard(
+                product: product,
+              );
             },
           );
         },
       ),
+
+      /// BOTTOM NAV
       bottomNavigationBar: AppBottomNavBar(
-      cartController: cartController,
-        ),
+        cartController: cartController,
+      ),
     );
   }
 }

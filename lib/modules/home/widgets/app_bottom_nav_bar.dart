@@ -78,16 +78,24 @@ class AppBottomNavBar extends StatelessWidget {
             /// Category
             Expanded(
               child: IconButton(
-                onPressed: () => Get.toNamed("/categories"),
+                onPressed: () => Get.toNamed(AppRoutes.allCategories),
                 icon: const Icon(Icons.grid_view),
               ),
             ),
 
             /// Search
+                        /// Search
             Expanded(
               child: IconButton(
-                onPressed: () => Get.toNamed("/search"),
-                icon: const Icon(Icons.search),
+                tooltip: "Search",
+                onPressed: () {
+                  Get.toNamed(
+                    AppRoutes.search,
+                  );
+                },
+                icon: const Icon(
+                  Icons.search,
+                ),
               ),
             ),
           ],

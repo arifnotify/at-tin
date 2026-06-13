@@ -11,4 +11,6 @@ class AppRoutes {
   static const ordersummary = "/order-summary";
 
   static const subCategory = "/sub-category";
+  static const String allCategories = "/allCategories";
+  static const search = "/search";
 }

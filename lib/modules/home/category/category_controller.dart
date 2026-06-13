@@ -4,16 +4,40 @@ import 'package:tin/data/services/category_service.dart';
 
 class CategoryController extends GetxController {
   var isLoading = false.obs;
-  var subCategories = <CategoryModel>[].obs;
+
+  var categories = <CategoryModel>[].obs;      // MAIN
+  var subCategories = <CategoryModel>[].obs;   // SUB
+
+  Future<void> loadMainCategories() async {
+    isLoading.value = true;
+
+    try {
+      final data = await CategoryService().getMainCategories();
+
+      categories.value =
+          (data as List)
+              .map((e) => CategoryModel.fromJson(e))
+              .toList();
+    } catch (e) {
+      print("ERROR: $e");
+    }
+
+    isLoading.value = false;
+  }
 
   Future<void> loadSubCategories(String parentId) async {
     isLoading.value = true;
 
-    final data =
-        await CategoryService()
-            .getSubCategories(parentId);
+    try {
+      final data = await CategoryService().getSubCategories(parentId);
 
-    subCategories.value = data;
+      subCategories.value =
+          (data as List)
+              .map((e) => CategoryModel.fromJson(e))
+              .toList();
+    } catch (e) {
+      print("ERROR: $e");
+    }
 
     isLoading.value = false;
   }
