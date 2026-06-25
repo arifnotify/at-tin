@@ -11,6 +11,9 @@ class ProductModel {
   final String? freshText;
   final String? expiryText;
 
+  /// 👉 YouTube Video URL (NEW)
+  final String? youtubeVideoUrl;
+
   /// Category
   final Map<String, dynamic>? category;
 
@@ -26,66 +29,55 @@ class ProductModel {
     this.productType,
     this.freshText,
     this.expiryText,
+    this.youtubeVideoUrl,
     this.category,
   });
 
-  factory ProductModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
       id: json['_id'] ?? '',
       title: json['title'] != null
-          ? Map<String, dynamic>.from(
-              json['title'],
-            )
+          ? Map<String, dynamic>.from(json['title'])
           : {},
       description: json['description'] != null
-          ? Map<String, dynamic>.from(
-              json['description'],
-            )
+          ? Map<String, dynamic>.from(json['description'])
           : {},
       price: (json['price'] ?? 0).toDouble(),
       discountPrice: json['discountPrice'] != null
-          ? (json['discountPrice'])
-              .toDouble()
+          ? (json['discountPrice']).toDouble()
           : null,
       flashSalePrice: json['flashSalePrice'] != null
-          ? (json['flashSalePrice'])
-              .toDouble()
+          ? (json['flashSalePrice']).toDouble()
           : null,
       images: json['images'] != null
-          ? List<String>.from(
-              json['images'],
-            )
+          ? List<String>.from(json['images'])
           : [],
       unit: json['unit'] ?? '',
       productType: json['productType'] ?? 'regular',
       freshText: json['freshText'] ?? '',
       expiryText: json['expiryText'] ?? '',
+
+      /// 👉 YouTube URL
+      youtubeVideoUrl: json['youtubeVideoUrl'],
+
       category: json['category'] != null
-          ? Map<String, dynamic>.from(
-              json['category'],
-            )
+          ? Map<String, dynamic>.from(json['category'])
           : null,
     );
   }
 
-  // English Title
-  String get titleEn => title['en'] ?? '';
+  // =========================
+  // Helper Getters
+  // =========================
 
-  // Bangla Title
+  String get titleEn => title['en'] ?? '';
   String get titleBn => title['bn'] ?? '';
 
-  // English Description
   String get descriptionEn => description['en'] ?? '';
-
-  // Bangla Description
   String get descriptionBn => description['bn'] ?? '';
 
-  // Category Name
   String get categoryName => category?['name'] ?? '';
 
-  /// Current Selling Price
   double get currentPrice {
     if (flashSalePrice != null && flashSalePrice! > 0) {
       return flashSalePrice!;
@@ -96,17 +88,18 @@ class ProductModel {
     return price;
   }
 
-  bool get hasDiscount {
-    return currentPrice < price;
-  }
+  bool get hasDiscount => currentPrice < price;
 
-  bool get isFlashSale {
-    return flashSalePrice != null && flashSalePrice! > 0;
-  }
+  bool get isFlashSale =>
+      flashSalePrice != null && flashSalePrice! > 0;
 
   int get discountPercent {
     if (!hasDiscount) return 0;
-    return (((price - currentPrice) / price) * 100)
-        .round();
+    return (((price - currentPrice) / price) * 100).round();
   }
+
+  /// 👉 YouTube check helper
+  bool get hasYoutubeVideo =>
+      youtubeVideoUrl != null &&
+      youtubeVideoUrl!.isNotEmpty;
 }

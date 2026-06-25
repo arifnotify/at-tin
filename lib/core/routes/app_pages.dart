@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tin/core/bindings/search_binding.dart';
 import 'package:tin/core/routes/app_routes.dart';
@@ -12,6 +13,8 @@ import 'package:tin/modules/home/category/sub_category.dart';
 import 'package:tin/modules/home/home_screen.dart';
 import 'package:tin/modules/order/order_success_page.dart';
 import 'package:tin/modules/order/order_summary_page.dart';
+import 'package:tin/modules/order/tracking_orders_page.dart';
+import 'package:tin/modules/order/tracking_page.dart';
 import 'package:tin/modules/product_details/product_details_page.dart';
 import 'package:tin/modules/search/search_screen.dart';
 import 'package:tin/modules/splash/splash_binding.dart';
@@ -84,6 +87,26 @@ class AppPages {
       SearchScreen(),
   binding:
       SearchBinding(),
+),
+
+GetPage(
+  name: AppRoutes.trackingOrders,
+  page: () => const TrackingOrdersPage(),
+),
+
+GetPage(
+  name: AppRoutes.tracking,
+  page: () {
+    final orderId = Get.parameters['id'];
+
+    if (orderId == null) {
+      return const Scaffold(
+        body: Center(child: Text("No Order ID Found")),
+      );
+    }
+
+    return OrderTrackingPage(orderId: orderId);
+  },
 ),
   ];
 }

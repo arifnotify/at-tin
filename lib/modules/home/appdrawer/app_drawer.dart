@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tin/controller/language_controller.dart';
-
 import 'package:tin/modules/auth/auth_controller.dart';
+import 'package:tin/modules/order/order_controller.dart';
 
 import 'drawer_controller.dart';
 
@@ -157,36 +157,215 @@ class AppDrawer extends StatelessWidget {
                 padding:
                     EdgeInsets.zero,
                 children: [
-                  _item(
-                    Icons.home,
-                    "Home",
-                    () => Get.back(),
-                  ),
+///.................orders...................//              
+Obx(() {
+  if (!auth.isLoggedIn.value) {
+    return const SizedBox();
+  }
 
-                  _item(
-                    Icons.grid_view,
-                    "Categories",
-                    () => Get.toNamed(
-                      "/categories",
+  final orderController =
+      Get.find<OrderController>();
+
+  final orders =
+      orderController.activeOrders;
+
+  if (orders.isEmpty) {
+    return const SizedBox();
+  }
+
+  return ExpansionTile(
+    initiallyExpanded: false,
+    leading: const Icon(
+      Icons.receipt_long,
+      color: Colors.deepPurple,
+    ),
+    title: const Text(
+      "My Orders",
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    children: orders.map<Widget>((order) {
+      final items =
+          order["items"] ?? [];
+
+      return Container(
+        margin: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius:
+              BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade300,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor:
+                Colors.deepPurple.shade50,
+            child: const Icon(
+              Icons.shopping_bag,
+              color: Colors.deepPurple,
+            ),
+          ),
+
+          title: Text(
+            "Order #${order["orderNumber"]}",
+            style: const TextStyle(
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
+
+          subtitle: Text(
+            order["orderStatus"] ?? "",
+            style: const TextStyle(
+              color: Colors.green,
+            ),
+          ),
+
+          children: items.map<Widget>((item) {
+            return ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+
+              leading: ClipRRect(
+                borderRadius:
+                    BorderRadius.circular(8),
+                child: Image.network(
+                  item["productImage"] ?? "",
+                  width: 55,
+                  height: 55,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (_, __, ___) =>
+                          Container(
+                    width: 55,
+                    height: 55,
+                    color:
+                        Colors.grey.shade200,
+                    child: const Icon(
+                      Icons.image,
                     ),
                   ),
+                ),
+              ),
 
-                  _item(
-                    Icons.shopping_cart,
-                    "Cart",
-                    () => Get.toNamed(
-                      "/cart",
+              title: Text(
+                item["productName"] ?? "",
+                maxLines: 2,
+                overflow:
+                    TextOverflow.ellipsis,
+              ),
+
+              subtitle: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Qty: ${item["quantity"]}",
+                  ),
+                  Text(
+                    "৳${item["price"]}",
+                    style: const TextStyle(
+                      fontWeight:
+                          FontWeight.bold,
+                      color:
+                          Colors.deepPurple,
                     ),
                   ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    }).toList(),
+  );
+}),
+///...........order tracking.................////////
+Obx(() {
+  final auth = Get.find<AuthController>();
 
-                  _item(
-                    Icons.receipt_long,
-                    "Orders",
-                    () => Get.toNamed(
-                      "/orders",
-                    ),
-                  ),
+  if (!auth.isLoggedIn.value) {
+    return const SizedBox();
+  }
 
+  final orderController =
+      Get.find<OrderController>();
+
+  final orders =
+      orderController.activeOrders;
+
+  /// ONLY ACTIVE ORDERS
+  final activeOrders = orders.where((order) {
+    final status =
+        order["orderStatus"]?.toString() ?? "";
+
+    return status != "Delivered" &&
+        status != "Cancelled";
+  }).toList();
+
+  if (activeOrders.isEmpty) {
+    return const SizedBox();
+  }
+
+  return ExpansionTile(
+    leading: const Icon(
+      Icons.local_shipping,
+      color: Colors.deepPurple,
+    ),
+    title: const Text("Order Tracking"),
+
+    children: activeOrders.map((order) {
+      final isSelected =
+          orderController.selectedOrderId.value ==
+              order["_id"];
+
+      return ListTile(
+        leading: Icon(
+          Icons.receipt_long,
+          color: isSelected
+              ? Colors.green
+              : null,
+        ),
+
+        title: Text(
+          "Order #${order["orderNumber"]}",
+        ),
+
+        subtitle: Text(order["orderStatus"]),
+
+        trailing: isSelected
+            ? const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+              )
+            : null,
+
+        onTap: () async {
+          await orderController.selectOrder(
+              order["_id"]);
+
+          Get.back();
+        },
+      );
+    }).toList(),
+  );
+}),
                   const Divider(),
 
                   _item(

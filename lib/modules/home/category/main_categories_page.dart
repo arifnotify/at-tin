@@ -4,6 +4,7 @@ import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/category/category_controller.dart';
 import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
+import 'package:tin/modules/home/widgets/app_loader.dart';
 
 class AllCategoriesPage extends StatefulWidget {
    const AllCategoriesPage({super.key});
@@ -28,8 +29,10 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
       appBar: AppBar(title: const Text("All Categories")),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+              return const Center(
+                child: AppLoader(),
+              );
+            }
 
         return GridView.builder(
           padding: const EdgeInsets.all(12),

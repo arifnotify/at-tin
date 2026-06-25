@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tin/modules/home/widgets/app_loader.dart';
 
 import 'address_controller.dart';
 import 'add_address_page.dart';
@@ -46,7 +47,7 @@ class AddressPage extends StatelessWidget {
         if (controller.isLoading.value) {
           return const Center(
             child:
-                CircularProgressIndicator(),
+                AppLoader(),
           );
         }
 

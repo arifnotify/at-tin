@@ -5,6 +5,7 @@ import 'package:tin/data/services/category_service.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/category/products_page.dart';
 import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
+import 'package:tin/modules/home/widgets/app_loader.dart';
 
 class SubCategoryPage extends StatelessWidget {
   SubCategoryPage({super.key});
@@ -26,10 +27,11 @@ class SubCategoryPage extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState ==
               ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+                  return const Center(
+                    child: AppLoader(),
+                  );
+                }
+          
 
           if (snapshot.hasError) {
             return Center(

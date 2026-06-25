@@ -5,6 +5,8 @@ import 'package:tin/controller/language_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
 import 'package:tin/modules/home/appdrawer/drawer_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/order/order_controller.dart';
+import 'package:tin/modules/order/order_tracking_controller.dart'; // 🔥 ADD THIS
 
 class AppBinding extends Bindings {
   @override
@@ -15,7 +17,11 @@ class AppBinding extends Bindings {
     Get.put(LocationController(), permanent: true);
     Get.put(DrawerControllerX(), permanent: true);
 
-    // 🛒 Cart last (important if it depends on others)
+    // 🛒 Cart
     Get.put(CartController(), permanent: true);
+
+    // 🚚 Order Controller (NEW FIX)
+    Get.put(OrderController(), permanent: true);
+    Get.put(OrderTrackingController(), permanent: true);
   }
 }

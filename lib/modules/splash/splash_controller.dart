@@ -1,29 +1,28 @@
 import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
 
-class SplashController
-    extends GetxController {
-
+class SplashController extends GetxController {
   @override
   void onInit() {
-
     super.onInit();
-
-    checkApp();
+    _init();
   }
 
-  void checkApp() {
+  void _init() async {
+    await Future.wait([
+      _minimumDelay(),
+      _loadAppData(),
+    ]);
 
-    Future.delayed(
-      const Duration(
-        seconds: 2,
-      ),
-      () {
+    Get.offAllNamed(AppRoutes.home);
+  }
 
-        Get.offAllNamed(
-          AppRoutes.home,
-        );
-      },
-    );
+  Future<void> _minimumDelay() async {
+    await Future.delayed(const Duration(milliseconds: 700));
+  }
+
+  Future<void> _loadAppData() async {
+    // এখানে future এ token check / api init দিতে পারো
+    return;
   }
 }

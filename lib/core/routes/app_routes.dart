@@ -13,4 +13,6 @@ class AppRoutes {
   static const subCategory = "/sub-category";
   static const String allCategories = "/allCategories";
   static const search = "/search";
+  static const trackingOrders = "/tracking-orders";
+  static const tracking = "/tracking/:id";
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:tin/controller/language_controller.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
-import 'package:tin/core/routes/app_routes.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({super.key});
@@ -16,10 +17,13 @@ class ProductDetailsPage extends StatefulWidget {
 class _ProductDetailsPageState
     extends State<ProductDetailsPage> {
   late ProductModel product;
-  late CartController cartController;
-  final lang = Get.find<LanguageController>();
 
-  int quantity = 0;
+  final lang =
+      Get.find<LanguageController>();
+
+  final cartController =
+      Get.find<CartController>();
+
   int currentImage = 0;
 
   @override
@@ -27,55 +31,37 @@ class _ProductDetailsPageState
     super.initState();
 
     product = Get.arguments;
-    cartController = Get.find<CartController>();
-
-    final item =
-        cartController.getItem(product.id);
-
-    if (item != null) {
-      quantity = item.quantity;
-    }
   }
 
-  void syncCart() {
-    final item =
-        cartController.getItem(product.id);
+  Future<void> openYoutube(
+    String url,
+  ) async {
+    final Uri uri = Uri.parse(url);
 
-    if (item == null) {
-      cartController.addToCart(product);
-      final newItem =
-          cartController.getItem(product.id);
-
-      if (newItem != null) {
-        newItem.quantity = quantity;
-        cartController.cartItems.refresh();
-      }
-    } else {
-      item.quantity = quantity;
-      cartController.cartItems.refresh();
-    }
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF8F8F8),
+      backgroundColor:
+          const Color(0xffF6F6F6),
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor:
+            Colors.white,
         elevation: 0,
         iconTheme:
-            const IconThemeData(color: Colors.black),
-        title: Obx(
-          () => Text(
-            lang.isBangla
-                ? product.titleBn
-                : product.titleEn,
-
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-            ),
+            const IconThemeData(
+          color: Colors.black,
+        ),
+        title: const Text(
+          "Product Details",
+          style: TextStyle(
+            color: Colors.black,
           ),
         ),
       ),
@@ -84,263 +70,437 @@ class _ProductDetailsPageState
         child: Column(
           children: [
 
-            /// IMAGE SLIDER
+            /// PRODUCT CONTENT
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-
-                  SizedBox(
-                    height: 280,
-                    child: PageView.builder(
-                      itemCount:
-                          product.images.isNotEmpty
-                              ? product.images.length
-                              : 1,
-                      onPageChanged: (i) {
-                        setState(() {
-                          currentImage = i;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return Image.network(
-                          product.images.isNotEmpty
-                              ? product
-                                  .images[index]
-                              : "",
-                          fit: BoxFit.contain,
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  /// DOT INDICATOR
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
-                    children: List.generate(
-                      product.images.isNotEmpty
-                          ? product.images.length
-                          : 1,
-                      (index) => Container(
-                        margin:
-                            const EdgeInsets.symmetric(
-                          horizontal: 4,
-                        ),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: currentImage ==
-                                  index
-                              ? Colors.purple
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            /// DETAILS
-            Container(
-              color: Colors.white,
-              padding:
-                  const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
 
-                  Obx(
+                  /// TITLE
+                  Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      10,
+                    ),
+                    child: Obx(
                       () => Text(
                         lang.isBangla
                             ? product.titleBn
                             : product.titleEn,
-
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      Text(
-                        "৳${product.currentPrice.toInt()}",
-                        style: const TextStyle(
-                          fontSize: 26,
-                          color: Colors.red,
+                        style:
+                            const TextStyle(
+                          fontSize: 18,
                           fontWeight:
                               FontWeight.bold,
                         ),
                       ),
-
-                      const SizedBox(width: 10),
-
-                      if (product.hasDiscount)
-                        Text(
-                          "৳${product.price.toInt()}",
-                          style: const TextStyle(
-                            decoration:
-                                TextDecoration
-                                    .lineThrough,
-                            color: Colors.grey,
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    product.unit ?? "1 pcs",
-                    style: TextStyle(
-                      color:
-                          Colors.grey.shade600,
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const Divider(
+                    height: 1,
+                  ),
 
-                  /// FRESH / EXPIRY
-                  Row(
-                    children: [
-                      Icon(
-                        product.productType ==
-                                "fresh"
-                            ? Icons.access_time
-                            : Icons.event,
-                        color: Colors.green,
-                        size: 18,
+                  /// IMAGE
+                  SizedBox(
+                    height: 250,
+                    child: PageView.builder(
+                      itemCount:
+                          product.images
+                                  .isEmpty
+                              ? 1
+                              : product.images
+                                  .length,
+                      onPageChanged:
+                          (index) {
+                        setState(() {
+                          currentImage =
+                              index;
+                        });
+                      },
+                      itemBuilder:
+                          (
+                            context,
+                            index,
+                          ) {
+                        return Padding(
+                          padding:
+                              const EdgeInsets.all(
+                            20,
+                          ),
+                          child:
+                              Image.network(
+                            product.images
+                                    .isNotEmpty
+                                ? product
+                                        .images[
+                                    index]
+                                : "",
+                            fit: BoxFit
+                                .contain,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  /// DOT
+                  if (product.images
+                          .length >
+                      1)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                        bottom: 10,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        product.productType ==
-                                "fresh"
-                            ? (product.freshText ??
-                                "Fresh")
-                            : (product.expiryText ??
-                                ""),
-                        style: const TextStyle(
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment
+                                .center,
+                        children:
+                            List.generate(
+                          product.images
+                              .length,
+                          (index) =>
+                              Container(
+                            margin:
+                                const EdgeInsets.symmetric(
+                              horizontal:
+                                  3,
+                            ),
+                            width: 8,
+                            height: 8,
+                            decoration:
+                                BoxDecoration(
+                              shape: BoxShape
+                                  .circle,
+                              color: currentImage ==
+                                      index
+                                  ? Colors
+                                      .purple
+                                  : Colors
+                                      .grey
+                                      .shade300,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  /// PRICE
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 10,
+                    ),
+                    child: Row(
+                      children: [
+
+                        Text(
+                          "৳${product.currentPrice.toInt()}",
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.red,
+                            fontSize: 28,
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+
+                        const SizedBox(
+                          width: 8,
+                        ),
+
+                        if (product
+                            .hasDiscount)
+                          Text(
+                            "৳${product.price.toInt()}",
+                            style:
+                                const TextStyle(
+                              color: Colors
+                                  .grey,
+                              decoration:
+                                  TextDecoration
+                                      .lineThrough,
+                              fontSize:
+                                  18,
+                            ),
+                          ),
+
+                        const SizedBox(
+                          width: 8,
+                        ),
+
+                        Text(
+                          product.unit ??
+                              "",
+                          style:
+                              const TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 20,
+                        ),
+                        /// FRESH / EXPIRY
+                  if (product
+                              .productType ==
+                          "fresh" &&
+                      product.freshText !=
+                          null)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
+                      child: Text(
+                        product.freshText!,
+                        style:
+                            const TextStyle(
                           fontWeight:
                               FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
 
-                  const SizedBox(height: 25),
+                  if (product
+                              .productType !=
+                          "fresh" &&
+                      product.expiryText !=
+                          null)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
+                      child: Text(
+                        product.expiryText!,
+                        style:
+                            const TextStyle(
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ),
 
-                  /// BUY + QTY
-                  Row(
-                    children: [
-
-                      /// BUY NOW
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Get.offAllNamed(
-                                  AppRoutes.home);
-                            },
+                 /// SMALL YOUTUBE BUTTON
+                  if (product
+                      .hasYoutubeVideo)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
+                      child: SizedBox(
+                        height: 35,
+                        child:
+                            ElevatedButton.icon(
+                          onPressed: () {
+                            openYoutube(
+                              product
+                                  .youtubeVideoUrl!,
+                            );
+                          },
+                          icon:
+                              const Icon(
+                            Icons
+                                .play_circle_fill,
+                            size: 18,
+                          ),
+                          label:
+                              const Text(
+                            "Video",
                             style:
-                                ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.green,
+                                TextStyle(
+                              fontSize:
+                                  12,
                             ),
-                            child: const Text(
-                              "Buy Now",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
+                          ),
+                          style:
+                              ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Colors.red,
+                            foregroundColor:
+                                Colors.white,
                           ),
                         ),
                       ),
-
-                      const SizedBox(width: 10),
-
-                      /// QTY CONTROL
-                      Container(
-                        decoration:
-                            BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey,
-                          ),
-                          borderRadius:
-                              BorderRadius.circular(
-                            10,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-
-                            IconButton(
-                              onPressed: () {
-                                if (quantity > 0) {
-                                  setState(() {
-                                    quantity--;
-                                  });
-                                  syncCart();
-                                }
-                              },
-                              icon: const Icon(
-                                Icons.remove,
-                              ),
-                            ),
-
-                            Text(
-                              quantity.toString(),
-                              style:
-                                  const TextStyle(
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  quantity++;
-                                });
-                                syncCart();
-                              },
-                              icon: const Icon(
-                                Icons.add,
-                                color:
-                                    Colors.purple,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(
+                    height: 10,
+                  ),
 
-                  Obx(
-                    () => Text(
-                      lang.isBangla
-                          ? product.descriptionBn
-                          : product.descriptionEn,
+                  /// BUY + CART
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 10,
+                    ),
+                    child: Row(
+                      children: [
 
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        height: 1.5,
+                        /// BUY NOW
+                        ElevatedButton(
+                          onPressed: () {
+                            cartController
+                                .addToCart(
+                              product,
+                            );
+                          },
+                          style:
+                              ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Colors
+                                    .deepPurple,
+                            shape:
+                                RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(
+                                8,
+                              ),
+                            ),
+                          ),
+                          child:
+                              const Text(
+                            "Buy Now",
+                            style:
+                                TextStyle(
+                              color: Colors
+                                  .white,
+                            ),
+                          ),
+                        ),
+
+                        const Spacer(),
+
+                        /// CART CONTROL
+                        Obx(() {
+                          final item =
+                              cartController
+                                  .getItem(
+                            product.id,
+                          );
+
+                          final qty =
+                              item
+                                      ?.quantity ??
+                                  0;
+
+                          if (qty ==
+                              0) {
+                            return IconButton(
+                              onPressed:
+                                  () {
+                                cartController
+                                    .addToCart(
+                                  product,
+                                );
+                              },
+                              icon:
+                                  const Icon(
+                                Icons.add,
+                                color: Colors
+                                    .deepPurple,
+                              ),
+                            );
+                          }
+
+                          return Container(
+                            decoration:
+                                BoxDecoration(
+                              border:
+                                  Border.all(
+                                color: Colors
+                                    .grey
+                                    .shade300,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(
+                                6,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+
+                                IconButton(
+                                  onPressed:
+                                      () {
+                                    cartController
+                                        .decrement(
+                                      product.id,
+                                    );
+                                  },
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .remove,
+                                  ),
+                                ),
+
+                                Text(
+                                  qty
+                                      .toString(),
+                                  style:
+                                      const TextStyle(
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+
+                                IconButton(
+                                  onPressed:
+                                      () {
+                                    cartController
+                                        .increment(
+                                      product.id,
+                                    );
+                                  },
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .add,
+                                    color: Colors
+                                        .purple,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(
+                    height: 20,
+                  ),
+
+                  /// DESCRIPTION
+                  Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      10,
+                    ),
+                    child: Obx(
+                      () => Text(
+                        lang.isBangla
+                            ? product
+                                .descriptionBn
+                            : product
+                                .descriptionEn,
+                        style:
+                            const TextStyle(
+                          height: 1.5,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
