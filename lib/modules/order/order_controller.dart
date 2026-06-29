@@ -38,6 +38,16 @@ class OrderController extends GetxController {
 
   RxBool isTrackingMinimized =true.obs;
 
+  /// =========================
+/// REWARD
+/// =========================
+
+RxBool useReward = false.obs;
+
+RxDouble rewardAmount = 0.0.obs;
+
+RxDouble walletBalance = 0.0.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -46,6 +56,7 @@ class OrderController extends GetxController {
         .isLoggedIn
         .value) {
       loadActiveOrders();
+      loadRewardWallet();
     }
   }
 
@@ -71,6 +82,8 @@ class OrderController extends GetxController {
       final order =
           await service.createOrder(
         addressId,
+        useReward: useReward.value,
+        rewardAmount: rewardAmount.value,
       );
 
       if (order == null ||
@@ -81,6 +94,12 @@ class OrderController extends GetxController {
       await cart.clearCart();
 
       await loadActiveOrders();
+
+      await loadRewardWallet();
+
+      useReward.value = false;
+
+      rewardAmount.value = 0;
 
       Get.offAllNamed(
         AppRoutes.ordersuccess,
@@ -98,6 +117,17 @@ class OrderController extends GetxController {
   // =========================
   // LOAD ACTIVE ORDERS
   // =========================
+
+  Future<void> loadRewardWallet() async {
+  try {
+    final wallet =
+        await service.getRewardWallet();
+
+    walletBalance.value =
+        (wallet["balance"] ?? 0)
+            .toDouble();
+  } catch (_) {}
+   }
 
 Future<void> loadActiveOrders() async {
   try {

@@ -14,6 +14,8 @@ import 'package:tin/modules/location/location_controller.dart';
 import 'package:tin/modules/order/order_controller.dart';
 import 'package:tin/modules/order/order_tracking_controller.dart';
 import 'package:tin/modules/order/rider_progres_bar.dart';
+import 'package:tin/modules/reward/reward_controller.dart';
+import 'package:tin/modules/support/user_help_section.dart';
 
 import 'widgets/banner_slider.dart';
 import 'widgets/category_grid.dart';
@@ -29,6 +31,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState
     extends State<HomeScreen> {
+  final rewardController =
+    Get.put(RewardController());
   final locationController =
       Get.put(LocationController());
 
@@ -59,6 +63,7 @@ class _HomeScreenState
     super.initState();
 
     initTracking();
+     loadRewardBalance(); // 👈 ADD THIS
   }
 
   Future<void> initTracking() async {
@@ -78,62 +83,117 @@ class _HomeScreenState
     }
   }
 
+Future<void> loadRewardBalance() async {
+
+  if (!auth.isLoggedIn.value) return;
+
+  final userId = auth.user['_id'] ?? '';
+  final token = auth.box.read("token"); // 🔥 FIX HERE
+
+  await rewardController.loadBalance(
+    userId,
+    token,
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       endDrawer: AppDrawer(),
 
-      appBar: AppBar(
-        elevation: 0,
-        title: Obx(
-          () => InkWell(
+appBar: AppBar(
+  elevation: 0,
+
+  title: Obx(
+    () => Row(
+      children: [
+
+        /// ================= LOCATION (OLD DESIGN SAME) =================
+        Expanded(
+          child: InkWell(
             onTap: () {
               Get.bottomSheet(
                 const LocationBottomSheet(),
-                backgroundColor:
-                    Colors.white,
+                backgroundColor: Colors.white,
                 isScrollControlled: true,
               );
             },
             child: Row(
-              mainAxisSize:
-                  MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Icons.location_on,
-                  color:
-                      Colors.deepPurple,
+                  color: Colors.deepPurple,
                   size: 20,
                 ),
-                const SizedBox(
-                  width: 5,
+                const SizedBox(width: 5),
+
+                /// LOCATION TEXT
+                Flexible(
+                  child: Text(
+                    locationController.currentLocation,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                Text(
-                  locationController
-                      .currentLocation,
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down,
-                ),
+
+                const Icon(Icons.keyboard_arrow_down),
               ],
             ),
           ),
         ),
-        actions: [
-          Builder(
-            builder: (context) =>
-                IconButton(
-              onPressed: () {
-                Scaffold.of(context)
-                    .openEndDrawer();
-              },
-              icon: const Icon(
-                Icons.menu,
-              ),
+
+        /// ================= REWARD BADGE (NEW ADD) =================
+        const SizedBox(width: 10),
+
+        Obx(() {
+          final reward = rewardController.balance.value;
+
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 5,
             ),
-          ),
-        ],
+            decoration: BoxDecoration(
+              color: Colors.green.shade600,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.card_giftcard,
+                  size: 16,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 4),
+
+                Text(
+                  "${reward.toStringAsFixed(2)} ৳",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    ),
+  ),
+
+  /// ================= MENU (UNCHANGED) =================
+  actions: [
+    Builder(
+      builder: (context) => IconButton(
+        onPressed: () {
+          Scaffold.of(context).openEndDrawer();
+        },
+        icon: const Icon(Icons.menu),
       ),
+    ),
+  ],
+),
 
       body: Obx(() {
 
@@ -242,10 +302,9 @@ class _HomeScreenState
                               )
                               .toList(),
                     ),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(
-                      height: 120,
-                    ),
+                  const UserHelpSection(),
                   ],
                 ),
               ),

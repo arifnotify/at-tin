@@ -8,11 +8,13 @@ import 'package:tin/modules/order/order_tracking_controller.dart';
 
 class AuthController extends GetxController {
   final service = AuthService();
-
   final box = GetStorage();
 
   RxBool isLoading = false.obs;
   RxBool isLoggedIn = false.obs;
+
+  /// 🔥 USER DATA STORE
+  RxMap<String, dynamic> user = <String, dynamic>{}.obs;
 
   @override
   void onInit() {
@@ -23,20 +25,16 @@ class AuthController extends GetxController {
   // =========================
   // CHECK LOGIN
   // =========================
-
   Future<void> checkLogin() async {
     final token = box.read("token");
 
     isLoggedIn.value = token != null;
 
     if (isLoggedIn.value) {
-      await Get.find<CartController>()
-          .loadServerCart();
+      await Get.find<CartController>().loadServerCart();
 
-      /// Load Active Order
       if (Get.isRegistered<OrderController>()) {
-        await Get.find<OrderController>()
-            .loadActiveOrders();
+        await Get.find<OrderController>().loadActiveOrders();
       }
     }
   }
@@ -44,10 +42,7 @@ class AuthController extends GetxController {
   // =========================
   // SEND OTP
   // =========================
-
-  Future<void> sendOtp(
-    String phone,
-  ) async {
+  Future<void> sendOtp(String phone) async {
     try {
       isLoading.value = true;
 
@@ -65,7 +60,6 @@ class AuthController extends GetxController {
   // =========================
   // VERIFY OTP
   // =========================
-
   Future<void> verifyOtp({
     required String phone,
     required String otp,
@@ -78,24 +72,24 @@ class AuthController extends GetxController {
         otp: otp,
       );
 
+      /// 🔥 TOKEN SAVE
       box.write(
         "token",
-        data["token"] ??
-            data["access_token"],
+        data["token"] ?? data["access_token"],
       );
+
+      /// 🔥 USER SAVE (IMPORTANT)
+      user.value = data["user"] ?? {};
 
       isLoggedIn.value = true;
 
-      final cartController =
-          Get.find<CartController>();
+      /// 🔥 CART SYNC
+      final cartController = Get.find<CartController>();
+      await cartController.syncCartAfterLogin();
 
-      await cartController
-          .syncCartAfterLogin();
-
-      /// 🔥 Load Active Orders
+      /// 🔥 LOAD ACTIVE ORDERS
       if (Get.isRegistered<OrderController>()) {
-        await Get.find<OrderController>()
-            .loadActiveOrders();
+        await Get.find<OrderController>().loadActiveOrders();
       }
 
       Get.offAllNamed("/home");
@@ -112,74 +106,49 @@ class AuthController extends GetxController {
   // =========================
   // LOGOUT
   // =========================
-
   void logout() {
     /// TOKEN REMOVE
     box.remove("token");
 
+    /// USER CLEAR
+    user.clear();
+
     /// CART CLEAR
     if (Get.isRegistered<CartController>()) {
-      Get.find<CartController>()
-          .clearCart();
+      Get.find<CartController>().clearCart();
     }
 
-    /// ORDER CONTROLLER RESET
+    /// ORDER RESET
     if (Get.isRegistered<OrderController>()) {
-      final order =
-          Get.find<OrderController>();
+      final order = Get.find<OrderController>();
 
       order.activeOrders.clear();
-
       order.selectedOrderId.value = "";
-
-      order.hasActiveOrder.value =
-          false;
-
-      order.trackingEnabled.value =
-          false;
-
-      order.showTrackingBar.value =
-          false;
-
-      order.activeOrderStatus =
-          null;
-
-      order.trackingProgress.value =
-          0;
-
-      order.isTrackingMinimized.value =
-          true;
+      order.hasActiveOrder.value = false;
+      order.trackingEnabled.value = false;
+      order.showTrackingBar.value = false;
+      order.activeOrderStatus = null;
+      order.trackingProgress.value = 0;
+      order.isTrackingMinimized.value = true;
     }
 
-    /// TRACKING CONTROLLER RESET
-    if (Get.isRegistered<
-        OrderTrackingController>()) {
-      final tracking =
-          Get.find<
-              OrderTrackingController>();
+    /// TRACKING RESET
+    if (Get.isRegistered<OrderTrackingController>()) {
+      final tracking = Get.find<OrderTrackingController>();
 
       tracking.stopTracking();
-
       tracking.status.value = "";
-
-      tracking.trackingEnabled.value =
-          false;
-
+      tracking.trackingEnabled.value = false;
       tracking.isLoading.value = false;
-
-      tracking.etaText.value =
-          "-- min";
-
+      tracking.etaText.value = "-- min";
       tracking.riderLat.value = 0;
       tracking.riderLng.value = 0;
-
       tracking.destLat.value = 0;
       tracking.destLng.value = 0;
-
       tracking.progress.value = 0;
     }
 
-    /// LOGIN FALSE
+    /// LOGIN STATE
     isLoggedIn.value = false;
 
     /// HOME

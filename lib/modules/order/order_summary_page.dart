@@ -30,6 +30,7 @@ class OrderSummaryPage extends StatelessWidget {
       OrderController(),
     );
 
+    final rewardController = TextEditingController();
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -228,6 +229,126 @@ class OrderSummaryPage extends StatelessWidget {
             ),
           ),
 
+          ////////////////////////////////////////////////////////////////////////////////
+          Obx(
+  () => Container(
+    margin: const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.orange.shade50,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.orange,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+
+        Row(
+          children: [
+
+            const Icon(
+              Icons.stars,
+              color: Colors.orange,
+            ),
+
+            const SizedBox(width: 8),
+
+            Text(
+              "Reward Balance : ৳${order.walletBalance.value.toStringAsFixed(2)}",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 15),
+
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: order.useReward.value,
+          title: const Text("Use Reward"),
+          onChanged: (v) {
+            order.useReward.value = v;
+
+            if (!v) {
+              rewardController.clear();
+              order.rewardAmount.value = 0;
+            }
+          },
+        ),
+
+        if (order.useReward.value)
+          TextField(
+            controller: rewardController,
+            keyboardType:
+                TextInputType.number,
+            decoration: const InputDecoration(
+              labelText:
+                  "Reward Amount",
+              border:
+                  OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+
+              final amount =
+                  double.tryParse(
+                        value,
+                      ) ??
+                      0;
+
+              if (amount >
+                  order
+                      .walletBalance
+                      .value) {
+
+                Get.snackbar(
+                  "Reward",
+                  "Insufficient reward balance",
+                );
+
+                rewardController.text =
+                    order
+                        .walletBalance
+                        .value
+                        .toStringAsFixed(
+                          0,
+                        );
+
+                rewardController
+                    .selection = TextSelection
+                        .fromPosition(
+                  TextPosition(
+                    offset:
+                        rewardController
+                            .text
+                            .length,
+                  ),
+                );
+
+                order.rewardAmount
+                    .value = order
+                        .walletBalance
+                        .value;
+
+                return;
+              }
+
+              order.rewardAmount.value =
+                  amount;
+            },
+          ),
+      ],
+    ),
+  ),
+),
+
           /// TOTAL SECTION
           Container(
             padding:
@@ -260,9 +381,27 @@ class OrderSummaryPage extends StatelessWidget {
                       "Subtotal",
                     ),
 
-                    Text(
-                      "৳${cart.totalPrice.toStringAsFixed(0)}",
+/////////////////////////////////////////////////////////////////////////////
+               Obx(() {
+                  double total =
+                      cart.grandTotal;
+
+                  if (order.useReward.value) {
+                    total -= order.rewardAmount.value;
+                  }
+
+                  if (total < 0) {
+                    total = 0;
+                  }
+
+                  return Text(
+                    "৳${total.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
+                  );
+                })
                   ],
                 ),
 
@@ -350,9 +489,20 @@ class OrderSummaryPage extends StatelessWidget {
 
                                 return;
                               }
+  ///////////////////////////////////////////////////////////////////////////////////                            
+                             if (order.useReward.value &&
+                                    order.rewardAmount.value >
+                                        order.walletBalance.value) {
 
-                              order
-                                  .placeOrder(
+                                  Get.snackbar(
+                                    "Reward",
+                                    "Reward balance is not enough",
+                                  );
+
+                                  return;
+                                }
+
+                              order.placeOrder(
                                 address
                                     .selectedAddress
                                     .value!

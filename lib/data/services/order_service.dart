@@ -4,19 +4,30 @@ class OrderService {
   // ==========================
   // CREATE ORDER
   // ==========================
-  Future<dynamic> createOrder(
-    String addressId,
-  ) async {
-    final response =
-        await DioClient.dio.post(
-      "/orders",
-      data: {
-        "shippingAddress": addressId,
-      },
-    );
+Future<dynamic> createOrder(
+  String addressId, {
+  bool useReward = false,
+  double rewardAmount = 0,
+}) async {
+  final response = await DioClient.dio.post(
+    "/orders",
+    data: {
+      "shippingAddress": addressId,
+      "useReward": useReward,
+      "rewardAmount": rewardAmount,
+    },
+  );
 
-    return response.data;
-  }
+  return response.data;
+}
+
+  Future<Map<String, dynamic>> getRewardWallet() async {
+  final response = await DioClient.dio.get(
+    "/rewards/wallet",
+  );
+
+  return Map<String, dynamic>.from(response.data);
+}
 
   // ==========================
   // TRACK ORDER
