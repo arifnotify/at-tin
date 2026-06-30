@@ -3,6 +3,7 @@ import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/data/services/order_service.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/location/location_controller.dart';
 import 'package:tin/modules/order/order_tracking_controller.dart';
 
 class OrderController extends GetxController {
@@ -79,11 +80,13 @@ RxDouble walletBalance = 0.0.obs;
         await cart.loadServerCart();
       }
 
-      final order =
-          await service.createOrder(
+      final order = await service.createOrder(
         addressId,
         useReward: useReward.value,
         rewardAmount: rewardAmount.value,
+        deliveryCharge: Get.find<LocationController>()
+        .deliveryCharge.value
+        .toDouble(),
       );
 
       if (order == null ||
@@ -118,16 +121,24 @@ RxDouble walletBalance = 0.0.obs;
   // LOAD ACTIVE ORDERS
   // =========================
 
-  Future<void> loadRewardWallet() async {
+Future<void> loadRewardWallet() async {
   try {
+
+    final auth = Get.find<AuthController>();
+
+    final userId = auth.user["_id"]?.toString();
+    if (userId == null || userId.isEmpty) return;
+
     final wallet =
-        await service.getRewardWallet();
+        await service.getRewardWallet(userId);
 
     walletBalance.value =
-        (wallet["balance"] ?? 0)
-            .toDouble();
-  } catch (_) {}
-   }
+        (wallet["balance"] ?? 0).toDouble();
+
+  } catch (e) {
+    print(e);
+  }
+}
 
 Future<void> loadActiveOrders() async {
   try {
@@ -171,10 +182,10 @@ Future<void> loadActiveOrders() async {
     }
 
     /// 🔥 GET SELECTED ORDER
-    final selected = active.firstWhere(
-      (e) =>
-          e["_id"] == selectedOrderId.value,
-    );
+      final selected = active.firstWhereOrNull(
+        (e) => e["_id"] == selectedOrderId.value,
+      );
+      if (selected == null) return;
 
     trackingEnabled.value =
         selected["trackingEnabled"] ?? false;

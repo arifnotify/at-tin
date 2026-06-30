@@ -8,6 +8,7 @@ Future<dynamic> createOrder(
   String addressId, {
   bool useReward = false,
   double rewardAmount = 0,
+  double deliveryCharge = 0,
 }) async {
   final response = await DioClient.dio.post(
     "/orders",
@@ -15,15 +16,19 @@ Future<dynamic> createOrder(
       "shippingAddress": addressId,
       "useReward": useReward,
       "rewardAmount": rewardAmount,
+      "deliveryCharge": deliveryCharge,
     },
   );
 
   return response.data;
 }
 
-  Future<Map<String, dynamic>> getRewardWallet() async {
+
+Future<Map<String, dynamic>> getRewardWallet(
+  String userId,
+) async {
   final response = await DioClient.dio.get(
-    "/rewards/wallet",
+    "/rewards/wallet/$userId",
   );
 
   return Map<String, dynamic>.from(response.data);

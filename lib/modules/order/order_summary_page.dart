@@ -1,538 +1,308 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:tin/modules/address/address_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
-
 import 'order_controller.dart';
 
-class OrderSummaryPage extends StatelessWidget {
-  const OrderSummaryPage({
-    super.key,
-  });
+class OrderSummaryPage extends StatefulWidget {
+  const OrderSummaryPage({super.key});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final cart =
-        Get.find<CartController>();
+  State<OrderSummaryPage> createState() => _OrderSummaryPageState();
+}
 
-    final address =
-        Get.find<AddressController>();
+class _OrderSummaryPageState extends State<OrderSummaryPage> {
+  final cart = Get.find<CartController>();
+  final address = Get.find<AddressController>();
+  final location = Get.find<LocationController>();
+  final order = Get.find<OrderController>();
 
-    final location =
-        Get.find<LocationController>();
+  @override
+  void initState() {
+    super.initState();
+    order.loadRewardWallet();
+  }
 
-    final order =
-        Get.put(
-      OrderController(),
+  double getSubtotal() => cart.totalPrice.toDouble();
+
+  double getDelivery() {
+    return Get.isRegistered<LocationController>()
+        ? location.deliveryCharge.value.toDouble()
+        : 0;
+  }
+
+  double getMaxDiscount() {
+    return getSubtotal() + getDelivery();
+  }
+
+  double getReward() {
+    if (!order.useReward.value) return 0;
+
+    double reward = order.rewardAmount.value.toDouble();
+    double maxAllowed = math.min(
+      order.walletBalance.value.toDouble(),
+      getMaxDiscount(),
     );
 
-    final rewardController = TextEditingController();
+    if (reward > maxAllowed) {
+      reward = maxAllowed;
+      order.rewardAmount.value = reward;
+    }
+
+    return reward;
+  }
+
+  double getTotal() {
+    return (getSubtotal() + getDelivery() - getReward()).clamp(0, double.infinity);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
+
       appBar: AppBar(
-        title: const Text(
-          "Order Summary",
-        ),
+        title: const Text("Checkout"),
+        centerTitle: true,
       ),
 
       body: Column(
         children: [
 
-          /// ADDRESS
-          Obx(
-            () {
-              final selected =
-                  address
-                      .selectedAddress
-                      .value;
+          // ================= ADDRESS =================
+          Obx(() {
+            final selected = address.selectedAddress.value;
 
-              if (selected ==
-                  null) {
-                return Container(
-                  width:
-                      double.infinity,
-                  margin:
-                      const EdgeInsets
-                          .all(
-                    12,
-                  ),
-                  padding:
-                      const EdgeInsets
-                          .all(
-                    12,
-                  ),
-                  decoration:
-                      BoxDecoration(
-                    color: Colors
-                        .white,
-                    borderRadius:
-                        BorderRadius.circular(
-                      12,
+            return Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
+              decoration: _card(),
+
+              child: selected == null
+                  ? const Text("No address selected")
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Delivery Address",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(selected.fullName),
+                        Text(selected.phoneNumber),
+                        Text(selected.areaOrVillage),
+                        Text("📍 ${selected.landmark}"),
+                      ],
                     ),
-                  ),
-                  child: const Text(
-                    "No address selected",
-                  ),
-                );
-              }
+            );
+          }),
 
-              return Container(
-                width:
-                    double.infinity,
-                margin:
-                    const EdgeInsets
-                        .all(
-                  12,
-                ),
-                padding:
-                    const EdgeInsets
-                        .all(
-                  12,
-                ),
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors
-                          .black12,
-                      blurRadius:
-                          5,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
-                  children: [
-
-                    const Text(
-                      "Delivery Address",
-                      style:
-                          TextStyle(
-                        fontWeight:
-                            FontWeight
-                                .bold,
-                        fontSize:
-                            16,
-                      ),
-                    ),
-
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    Text(
-                      selected
-                          .fullName,
-                      style:
-                          const TextStyle(
-                        fontWeight:
-                            FontWeight
-                                .bold,
-                      ),
-                    ),
-
-                    Text(
-                      selected
-                          .phoneNumber,
-                    ),
-
-                    const SizedBox(
-                      height: 6,
-                    ),
-
-                    Text(
-                      selected
-                          .areaOrVillage,
-                    ),
-
-                    Text(
-                      "📍 ${selected.landmark}",
-                    ),
-
-                    if ((selected
-                                .directionNote ??
-                            "")
-                        .isNotEmpty)
-                      Text(
-                        selected
-                            .directionNote!,
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          /// PRODUCT LIST
+          // ================= CART ITEMS =================
           Expanded(
-            child:
-                ListView.builder(
-              itemCount:
-                  cart.cartItems
-                      .length,
-              itemBuilder:
-                  (
-                context,
-                index,
-              ) {
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: cart.cartItems.length,
+              itemBuilder: (context, index) {
+                final item = cart.cartItems[index];
 
-                final item =
-                    cart.cartItems[
-                        index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: _card(),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          item.image,
+                          width: 55,
+                          height: 55,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
 
-                return Card(
-                  margin:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        12,
-                    vertical: 4,
-                  ),
-                  child:
-                      ListTile(
-                    leading:
-                        Image.network(
-                      item.image,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit
-                          .cover,
-                    ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.localizedTitle,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Qty: ${item.quantity}",
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                    title: Text(
-                      item.localizedTitle,
-                    ),
-
-                    subtitle:
-                        Text(
-                      "Qty: ${item.quantity}",
-                    ),
-
-                    trailing:
-                        Text(
-                      "৳${(item.price * item.quantity).toStringAsFixed(0)}",
-                    ),
+                      Text(
+                        "৳${(item.price * item.quantity).toStringAsFixed(0)}",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 );
               },
             ),
           ),
 
-          ////////////////////////////////////////////////////////////////////////////////
-          Obx(
-  () => Container(
-    margin: const EdgeInsets.symmetric(
-      horizontal: 12,
-      vertical: 8,
-    ),
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: Colors.orange.shade50,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.orange,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
+          // ================= REWARD =================
+          Obx(() {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: _card(borderColor: Colors.orange),
 
-        Row(
-          children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-            const Icon(
-              Icons.stars,
-              color: Colors.orange,
-            ),
-
-            const SizedBox(width: 8),
-
-            Text(
-              "Reward Balance : ৳${order.walletBalance.value.toStringAsFixed(2)}",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 15),
-
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: order.useReward.value,
-          title: const Text("Use Reward"),
-          onChanged: (v) {
-            order.useReward.value = v;
-
-            if (!v) {
-              rewardController.clear();
-              order.rewardAmount.value = 0;
-            }
-          },
-        ),
-
-        if (order.useReward.value)
-          TextField(
-            controller: rewardController,
-            keyboardType:
-                TextInputType.number,
-            decoration: const InputDecoration(
-              labelText:
-                  "Reward Amount",
-              border:
-                  OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-
-              final amount =
-                  double.tryParse(
-                        value,
-                      ) ??
-                      0;
-
-              if (amount >
-                  order
-                      .walletBalance
-                      .value) {
-
-                Get.snackbar(
-                  "Reward",
-                  "Insufficient reward balance",
-                );
-
-                rewardController.text =
-                    order
-                        .walletBalance
-                        .value
-                        .toStringAsFixed(
-                          0,
-                        );
-
-                rewardController
-                    .selection = TextSelection
-                        .fromPosition(
-                  TextPosition(
-                    offset:
-                        rewardController
-                            .text
-                            .length,
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.orange),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Wallet: ৳${order.walletBalance.value.toStringAsFixed(0)}",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                );
 
-                order.rewardAmount
-                    .value = order
-                        .walletBalance
-                        .value;
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Use Reward"),
+                    value: order.useReward.value,
+                    onChanged: (v) {
+                      order.useReward.value = v;
 
-                return;
-              }
+                      if (!v) {
+                        order.rewardAmount.value = 0;
+                      } else {
+                        order.rewardAmount.value = math.min(
+                          order.walletBalance.value.toDouble(),
+                          getMaxDiscount(),
+                        );
+                      }
+                    },
+                  ),
 
-              order.rewardAmount.value =
-                  amount;
-            },
-          ),
-      ],
-    ),
-  ),
-),
+                  if (order.useReward.value)
+                    Slider(
+                      value: order.rewardAmount.value.toDouble(),
+                      min: 0,
+                      max: math.min(
+                        order.walletBalance.value.toDouble(),
+                        getMaxDiscount(),
+                      ),
+                      divisions: 20,
+                      label: "৳${order.rewardAmount.value.toStringAsFixed(0)}",
+                      onChanged: (v) {
+                        order.rewardAmount.value = v;
+                      },
+                    ),
+                ],
+              ),
+            );
+          }),
 
-          /// TOTAL SECTION
+          // ================= TOTAL =================
           Container(
-            padding:
-                const EdgeInsets
-                    .all(
-              16,
-            ),
-            decoration:
-                const BoxDecoration(
-              color:
-                  Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors
-                      .black12,
-                  blurRadius: 5,
-                ),
-              ],
-            ),
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: _card(),
+
             child: Column(
               children: [
-
-                Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .spaceBetween,
-                  children: [
-
-                    const Text(
-                      "Subtotal",
-                    ),
-
-/////////////////////////////////////////////////////////////////////////////
-               Obx(() {
-                  double total =
-                      cart.grandTotal;
-
-                  if (order.useReward.value) {
-                    total -= order.rewardAmount.value;
-                  }
-
-                  if (total < 0) {
-                    total = 0;
-                  }
-
-                  return Text(
-                    "৳${total.toStringAsFixed(0)}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  );
-                })
-                  ],
-                ),
-
-                const SizedBox(
-                  height: 8,
-                ),
-
-                Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .spaceBetween,
-                  children: [
-
-                    const Text(
-                      "Delivery Charge",
-                    ),
-
-                    Text(
-                      "৳${location.deliveryCharge.value}",
-                    ),
-                  ],
-                ),
+                _row("Subtotal", getSubtotal()),
+                _row("Delivery", getDelivery()),
+                if (order.useReward.value)
+                  _row("Reward", -getReward()),
 
                 const Divider(),
 
                 Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-
                     const Text(
                       "Total",
-                      style:
-                          TextStyle(
-                        fontWeight:
-                            FontWeight
-                                .bold,
-                        fontSize:
-                            16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
-
                     Text(
-                      "৳${cart.grandTotal.toStringAsFixed(0)}",
-                      style:
-                          const TextStyle(
-                        fontWeight:
-                            FontWeight
-                                .bold,
-                        fontSize:
-                            16,
+                      "৳${getTotal().toStringAsFixed(0)}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.green,
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(
-                  height: 20,
-                ),
-
-                Obx(
-                  () =>
-                      SizedBox(
-                    width:
-                        double.infinity,
-                    height: 55,
-                    child:
-                        ElevatedButton(
-                      onPressed: order
-                              .isLoading
-                              .value
-                          ? null
-                          : () {
-
-                              if (address
-                                      .selectedAddress
-                                      .value ==
-                                  null) {
-
-                                Get.snackbar(
-                                  "Error",
-                                  "Please select an address",
-                                );
-
-                                return;
-                              }
-  ///////////////////////////////////////////////////////////////////////////////////                            
-                             if (order.useReward.value &&
-                                    order.rewardAmount.value >
-                                        order.walletBalance.value) {
-
-                                  Get.snackbar(
-                                    "Reward",
-                                    "Reward balance is not enough",
-                                  );
-
-                                  return;
-                                }
-
-                              order.placeOrder(
-                                address
-                                    .selectedAddress
-                                    .value!
-                                    .id,
-                              );
-                            },
-
-                      child: order
-                              .isLoading
-                              .value
-                          ? const SizedBox(
-                              height:
-                                  20,
-                              width:
-                                  20,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth:
-                                    2,
-                              ),
-                            )
-                          : const Text(
-                              "Cash On Delivery",
-                            ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
+
+          // ================= BUTTON =================
+          Obx(() {
+            return Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: order.isLoading.value
+                      ? null
+                      : () {
+                          final selected = address.selectedAddress.value;
+
+                          if (selected == null) {
+                            Get.snackbar("Error", "Select address first");
+                            return;
+                          }
+
+                          order.placeOrder(selected.id);
+                        },
+                  child: order.isLoading.value
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("Place Order"),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ================= UI HELPERS =================
+  BoxDecoration _card({Color? borderColor}) {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: borderColor ?? Colors.transparent),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 8,
+        ),
+      ],
+    );
+  }
+
+  Widget _row(String title, double value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title),
+          Text("৳${value.toStringAsFixed(0)}"),
         ],
       ),
     );

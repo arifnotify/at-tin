@@ -117,13 +117,13 @@ Future<void> loadServerCart() async {
 }
 
   /// GET ITEM
-  CartItemModel? getItem(String id) {
-    try {
-      return cartItems.firstWhere((e) => e.id == id);
-    } catch (e) {
-      return null;
-    }
+CartItemModel? getItem(String id) {
+  try {
+    return cartItems.firstWhereOrNull((e) => e.id == id);
+  } catch (_) {
+    return null;
   }
+}
 
   /// ADD TO CART
 Future<void> addToCart(
@@ -299,10 +299,14 @@ Future<void> removeItem(String id) async {
       cartItems.fold(0, (a, b) => a + ((b.originalPrice - b.price) * b.quantity));
 
   /// GRAND TOTAL WITH DELIVERY
-  double get grandTotal {
-    final location = Get.find<LocationController>();
-    return totalPrice + location.deliveryCharge.value;
+double get grandTotal {
+  if (!Get.isRegistered<LocationController>()) {
+    return totalPrice;
   }
+
+  final location = Get.find<LocationController>();
+  return totalPrice + location.deliveryCharge.value;
+}
 
 // server increase
   Future<void> increaseServerQty(
