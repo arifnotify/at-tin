@@ -23,18 +23,26 @@ class AuthController extends GetxController {
   }
 
   // =========================
-  // CHECK LOGIN
+  // CHECK LOGIN (UPDATED)
   // =========================
   Future<void> checkLogin() async {
     final token = box.read("token");
+    final savedUser = box.read("user_data"); // লোকাল স্টোরেজ থেকে ইউজার ডাটা রিড করা হচ্ছে
 
     isLoggedIn.value = token != null;
 
     if (isLoggedIn.value) {
+      // যদি লোকাল স্টোরেজে ইউজার ডাটা থাকে, তবে তা RAM-এ লোড করা হচ্ছে
+      if (savedUser != null) {
+        user.value = Map<String, dynamic>.from(savedUser);
+      }
+
       await Get.find<CartController>().loadServerCart();
 
       if (Get.isRegistered<OrderController>()) {
-        await Get.find<OrderController>().loadActiveOrders();
+        final orderCtrl = Get.find<OrderController>();
+        await orderCtrl.loadActiveOrders();
+        await orderCtrl.loadRewardWallet(); // ওয়ালেট ও অর্ডার ডাটা রিফ্রেশ করা হচ্ছে
       }
     }
   }
@@ -58,7 +66,7 @@ class AuthController extends GetxController {
   }
 
   // =========================
-  // VERIFY OTP
+  // VERIFY OTP (UPDATED)
   // =========================
   Future<void> verifyOtp({
     required String phone,
@@ -78,8 +86,10 @@ class AuthController extends GetxController {
         data["token"] ?? data["access_token"],
       );
 
-      /// 🔥 USER SAVE (IMPORTANT)
-      user.value = data["user"] ?? {};
+      /// 🔥 USER SAVE (IMPORTANT CHANGE)
+      final userData = data["user"] ?? {};
+      user.value = userData;
+      box.write("user_data", userData); // ইউজার ডাটা লোকাল স্টোরেজে পার্মানেন্টলি সেভ করা হলো
 
       isLoggedIn.value = true;
 
@@ -89,7 +99,9 @@ class AuthController extends GetxController {
 
       /// 🔥 LOAD ACTIVE ORDERS
       if (Get.isRegistered<OrderController>()) {
-        await Get.find<OrderController>().loadActiveOrders();
+        final orderCtrl = Get.find<OrderController>();
+        await orderCtrl.loadActiveOrders();
+        await orderCtrl.loadRewardWallet();
       }
 
       Get.offAllNamed("/home");
@@ -104,11 +116,12 @@ class AuthController extends GetxController {
   }
 
   // =========================
-  // LOGOUT
+  // LOGOUT (UPDATED)
   // =========================
   void logout() {
-    /// TOKEN REMOVE
+    /// TOKEN & USER DATA REMOVE
     box.remove("token");
+    box.remove("user_data"); // লগআউটের সময় লোকাল স্টোরেজের ইউজার ডাটা মুছে ফেলা হলো
 
     /// USER CLEAR
     user.clear();

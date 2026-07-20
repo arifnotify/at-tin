@@ -31,15 +31,25 @@ class CartService {
   }
 
   /// GET SERVER CART
-  Future<List<dynamic>> getCart() async {
+Future<List<dynamic>> getCart() async {
 
-    final response =
-        await DioClient.dio.get(
-      "/cart",
-    );
+  final response =
+      await DioClient.dio.get(
+    "/cart",
+  );
+
+
+  if(response.data is List){
 
     return response.data;
+
+  }else{
+
+    return [];
+
   }
+
+}
 
   /// UPDATE CART QUANTITY
   Future<void> updateQuantity(
@@ -72,4 +82,28 @@ class CartService {
       "/cart/clear",
     );
   }
+/////////////////////////////////////////////////////////////////////
+Future<List<dynamic>> refreshCart() async {
+
+  final response =
+      await DioClient.dio.get(
+    "/cart/refresh",
+  );
+
+
+  if(response.data is List){
+
+    return response.data;
+
+  }else{
+
+    print(
+      "INVALID CART RESPONSE: ${response.data}"
+    );
+
+    return [];
+
+  }
+
+}
 }

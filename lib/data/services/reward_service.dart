@@ -24,4 +24,25 @@ class RewardService {
 
     return (data['balance'] ?? 0).toDouble();
   }
+
+////////////////////////////////////////////////////////////////////////////////////
+Future<List<dynamic>> getTransactions(
+  String userId,
+  String token,
+) async {
+  final url =
+      "${AppConstants.baseUrl}/rewards/history/$userId";
+
+  final res = await http.get(
+    Uri.parse(url),
+    headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    },
+  );
+
+  final data = jsonDecode(res.body);
+
+  return data;
+}
 }

@@ -148,7 +148,7 @@ class _ProductDetailsPageState
 
                   /// DOT
                   if (product.images
-                          .length >
+                      .length >
                       1)
                     Padding(
                       padding:
@@ -189,13 +189,16 @@ class _ProductDetailsPageState
                       ),
                     ),
 
-                  /// PRICE
+                  /// PRICE & TEXT (Wrap ব্যবহার করায় স্ক্রিন ছোট হলে উপাদানগুলো নিজে থেকেই নিচের লাইনে চলে আসবে)
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(
                       horizontal: 10,
                     ),
-                    child: Row(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8, // পাশাপাশি গ্যাপ
+                      runSpacing: 8, // নিচের লাইনে নামলে গ্যাপ
                       children: [
 
                         Text(
@@ -209,10 +212,6 @@ class _ProductDetailsPageState
                                 FontWeight
                                     .bold,
                           ),
-                        ),
-
-                        const SizedBox(
-                          width: 8,
                         ),
 
                         if (product
@@ -231,10 +230,6 @@ class _ProductDetailsPageState
                             ),
                           ),
 
-                        const SizedBox(
-                          width: 8,
-                        ),
-
                         Text(
                           product.unit ??
                               "",
@@ -243,93 +238,73 @@ class _ProductDetailsPageState
                             fontSize: 16,
                           ),
                         ),
-                        const SizedBox(
-                          width: 20,
-                        ),
+
                         /// FRESH / EXPIRY
-                  if (product
-                              .productType ==
-                          "fresh" &&
-                      product.freshText !=
-                          null)
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 10,
-                      ),
-                      child: Text(
-                        product.freshText!,
-                        style:
-                            const TextStyle(
-                          fontWeight:
-                              FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                  if (product
-                              .productType !=
-                          "fresh" &&
-                      product.expiryText !=
-                          null)
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 10,
-                      ),
-                      child: Text(
-                        product.expiryText!,
-                        style:
-                            const TextStyle(
-                          fontWeight:
-                              FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                 /// SMALL YOUTUBE BUTTON
-                  if (product
-                      .hasYoutubeVideo)
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 10,
-                      ),
-                      child: SizedBox(
-                        height: 35,
-                        child:
-                            ElevatedButton.icon(
-                          onPressed: () {
-                            openYoutube(
-                              product
-                                  .youtubeVideoUrl!,
-                            );
-                          },
-                          icon:
-                              const Icon(
-                            Icons
-                                .play_circle_fill,
-                            size: 18,
-                          ),
-                          label:
-                              const Text(
-                            "Video",
+                        if (product
+                                .productType ==
+                            "fresh" &&
+                            product.freshText !=
+                                null)
+                          Text(
+                            product.freshText!,
                             style:
-                                TextStyle(
-                              fontSize:
-                                  12,
+                                const TextStyle(
+                              fontWeight:
+                                  FontWeight.w600,
                             ),
                           ),
-                          style:
-                              ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.red,
-                            foregroundColor:
-                                Colors.white,
+
+                        if (product
+                                .productType !=
+                            "fresh" &&
+                            product.expiryText !=
+                                null)
+                          Text(
+                            product.expiryText!,
+                            style:
+                                const TextStyle(
+                              fontWeight:
+                                  FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
+
+                        /// SMALL YOUTUBE BUTTON
+                        if (product
+                            .hasYoutubeVideo)
+                          SizedBox(
+                            height: 35,
+                            child:
+                                ElevatedButton.icon(
+                              onPressed: () {
+                                openYoutube(
+                                  product
+                                      .youtubeVideoUrl!,
+                                );
+                              },
+                              icon:
+                                  const Icon(
+                                Icons
+                                    .play_circle_fill,
+                                size: 18,
+                              ),
+                              label:
+                                  const Text(
+                                "Video",
+                                style:
+                                    TextStyle(
+                                  fontSize:
+                                      12,
+                                ),
+                              ),
+                              style:
+                                  ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.red,
+                                foregroundColor:
+                                    Colors.white,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -347,39 +322,41 @@ class _ProductDetailsPageState
                     child: Row(
                       children: [
 
-                        /// BUY NOW
-                        ElevatedButton(
-                          onPressed: () {
-                            cartController
-                                .addToCart(
-                              product,
-                            );
-                          },
-                          style:
-                              ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors
-                                    .deepPurple,
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                8,
+                        /// BUY NOW (Expanded যুক্ত করায় এটি স্ক্রিনের বাকি খালি জায়গা নিজে থেকেই নিয়ে নেবে)
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              cartController
+                                  .addToCart(
+                                product,
+                              );
+                            },
+                            style:
+                                ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Colors
+                                      .deepPurple,
+                              shape:
+                                  RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  8,
+                                ),
                               ),
                             ),
-                          ),
-                          child:
-                              const Text(
-                            "Buy Now",
-                            style:
-                                TextStyle(
-                              color: Colors
-                                  .white,
+                            child:
+                                const Text(
+                              "Buy Now",
+                              style:
+                                  TextStyle(
+                                color: Colors
+                                    .white,
+                              ),
                             ),
                           ),
                         ),
 
-                        const Spacer(),
+                        const SizedBox(width: 10),
 
                         /// CART CONTROL
                         Obx(() {
@@ -428,6 +405,7 @@ class _ProductDetailsPageState
                               ),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
 
                                 IconButton(

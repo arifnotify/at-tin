@@ -7,10 +7,12 @@ import 'package:tin/modules/cart/cart_controller.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
+  final double? cardWidth;
 
   const ProductCard({
     super.key,
     required this.product,
+    this.cardWidth,
   });
 
   @override
@@ -29,393 +31,273 @@ class ProductCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 170,
-        margin: const EdgeInsets.only(right: 12),
-        child: Card(
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: Colors.grey.shade200,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                /// IMAGE + CART
-                SizedBox(
-                  height: 140,
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Image.network(
-                          product.images.isNotEmpty
-                              ? product.images.first
-                              : "",
-                          height: 120,
-                          fit: BoxFit.contain,
+        width: cardWidth ?? 145, 
+        margin: const EdgeInsets.only(right: 12, bottom: 4),
+        color: Colors.transparent, 
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// ১. ইমেজ সেকশন + কার্ট বাটন (Stack)
+            SizedBox(
+              height: 120, 
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Image.network(
+                        product.images.isNotEmpty ? product.images.first : "",
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.image_not_supported,
+                          size: 40,
+                          color: Colors.grey.shade300,
                         ),
                       ),
+                    ),
+                  ),
 
-                      /// FLASH SALE BADGE
-                      if (product.isFlashSale)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          child: Container(
-                            padding:
-                                const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius:
-                                  BorderRadius.circular(4),
-                            ),
-                            child: Obx(() {
-                              return Text(
-                                lang.currentLanguage.value == "bn"
-                                    ? "স্বল্প মূল্যে"
-                                    : "FLASH",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            }),
-                          ),
+                  /// ফ্ল্যাশ সেল ব্যাজ
+                  if (product.isFlashSale)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4D4D),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-
-                      /// CART BUTTON
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
                         child: Obx(() {
-                          final item =
-                              cartController.getItem(
-                            product.id,
-                          );
-                          /// ADD BUTTON
-                          if (item == null) {
-                            return GestureDetector(
-                              onTap: () {
-                                cartController
-                                    .addToCart(product);
-                              },
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration:
-                                    BoxDecoration(
-                                  shape:
-                                      BoxShape.circle,
-                                  border: Border.all(
-                                    color:
-                                        const Color(
-                                      0xff7B3FE4,
-                                    ),
-                                    width: 2,
-                                  ),
-                                  color:
-                                      Colors.white,
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 22,
-                                  color:
-                                      Color(
-                                    0xff7B3FE4,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          /// QTY BADGE
-                          if (!item.isEditing) {
-                            return GestureDetector(
-                              onTap: () {
-                                cartController
-                                    .showControls(
-                                  product.id,
-                                );
-                              },
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration:
-                                    const BoxDecoration(
-                                  shape:
-                                      BoxShape.circle,
-                                  color:
-                                      Color(
-                                    0xff7B3FE4,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    item.quantity
-                                        .toString(),
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          Colors.white,
-                                      fontSize:
-                                          16,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          /// FULL CONTROL
-                          return Container(
-                            width: 120,
-                            height: 36,
-                            decoration:
-                                BoxDecoration(
-                              color:
-                                  Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(
-                                20,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  blurRadius: 5,
-                                  color:
-                                      Colors.black12,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                /// MINUS
-                                Expanded(
-                                  child: InkWell(
-                                    borderRadius:
-                                        const BorderRadius.only(
-                                      topLeft:
-                                          Radius.circular(
-                                        20,
-                                      ),
-                                      bottomLeft:
-                                          Radius.circular(
-                                        20,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      cartController
-                                          .decrement(
-                                        product.id,
-                                      );
-                                    },
-                                    child:
-                                        const Center(
-                                      child: Icon(
-                                        Icons.remove,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                Text(
-                                  item.quantity
-                                      .toString(),
-                                  style:
-                                      const TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-
-                                /// PLUS
-                                Expanded(
-                                  child: InkWell(
-                                    borderRadius:
-                                        const BorderRadius.only(
-                                      topRight:
-                                          Radius.circular(
-                                        20,
-                                      ),
-                                      bottomRight:
-                                          Radius.circular(
-                                        20,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      cartController
-                                          .increment(
-                                        product.id,
-                                      );
-                                    },
-                                    child:
-                                        const Center(
-                                      child: Icon(
-                                        Icons.add,
-                                        size: 20,
-                                        color:
-                                            Color(
-                                          0xff7B3FE4,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          return Text(
+                            lang.currentLanguage.value == "bn" ? "স্বল্প মূল্যে" : "FLASH",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
                             ),
                           );
                         }),
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                /// PRICE
-                Row(
-                  children: [
-                    Text(
-                      "৳${currentPrice.toInt()}",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight:
-                            FontWeight.bold,
-                        color:
-                            Color(0xffFF6B6B),
-                      ),
                     ),
 
-                    const SizedBox(width: 5),
+                  /// কার্ট বাটন এবং প্লাস-মাইনাস কন্ট্রোলার লেয়ার
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    left: 0,
+                    child: Obx(() {
+                      final item = cartController.getItem(product.id);
 
-                    if (hasDiscount)
-                      Text(
-                        "৳${product.price.toInt()}",
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                          decoration:
-                              TextDecoration
-                                  .lineThrough,
-                        ),
-                      ),
+                      if (item == null) {
+                        return Align(
+                          alignment: Alignment.bottomRight,
+                          child: GestureDetector(
+                            onTap: () => cartController.addToCart(product),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: const Color(0xff7B3FE4),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 22,
+                                color: Color(0xff7B3FE4),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
 
-                    const Spacer(),
+                      if (!item.isEditing) {
+                        return Align(
+                          alignment: Alignment.bottomRight,
+                          child: GestureDetector(
+                            onTap: () => cartController.showControls(product.id),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xff7B3FE4),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  item.quantity.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
 
-                    if (product.discountPercent >
-                        0)
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        decoration:
-                            BoxDecoration(
-                          color: Colors.green,
-                          borderRadius:
-                              BorderRadius.circular(
-                            4,
+                      return Container(
+                        height: 36,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: const Color(0xff7B3FE4),
+                            width: 1.5,
                           ),
                         ),
-                        child: Text(
-                          "-${product.discountPercent}%",
-                          style:
-                              const TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize: 10,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(18),
+                                  bottomLeft: Radius.circular(18),
+                                ),
+                                onTap: () => cartController.decrement(product.id),
+                                child: const Center(
+                                  child: Icon(Icons.remove, size: 18, color: Color(0xff7B3FE4)),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              item.quantity.toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(18),
+                                  bottomRight: Radius.circular(18),
+                                ),
+                                onTap: () => cartController.increment(product.id),
+                                child: const Center(
+                                  child: Icon(Icons.add, size: 18, color: Color(0xff7B3FE4)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                  ],
-                ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
 
-                const SizedBox(height: 6),
+            const SizedBox(height: 8),
 
-                /// TITLE
-                Obx(() {
-                return Text(
-                  lang.isBangla
-                      ? product.titleBn
-                      : product.titleEn,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+            /// ২. প্রাইস সেকশন
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  "৳${currentPrice.toInt()}",
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xffFF6B6B),
+                  ),
+                ),
+                if (hasDiscount) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    "৳${product.price.toInt()}",
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            const SizedBox(height: 4),
+
+            /// ৩. প্রোডাক্ট টাইটেল সেকশন (SizedBox দিয়ে সর্বোচ্চ ২ লাইনের ফিক্সড স্পেস রাখা হয়েছে)
+            SizedBox(
+              height: 38, // ২ লাইনের টেক্সটের জন্য স্ট্যান্ডার্ড ফিক্সড হাইট
+              child: Text(
+                lang.isBangla ? product.titleBn : product.titleEn,
+                maxLines: 2, 
+                overflow: TextOverflow.ellipsis, 
+                style: const TextStyle(
+                  fontSize: 15, 
+                  fontWeight: FontWeight.w500, 
+                  color: Color(0xFF2D2D2D),
+                  height: 1.25, 
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 4), // টাইটেল এবং টাইপের মাঝখানে সামান্য গ্যাপ
+
+            /// ৪. বটম ইউনিট এবং টাইপ/এক্সপায়ারি টেক্সট
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  product.unit?.isNotEmpty == true ? product.unit! : "1 pcs",
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
-                );
-              }),
-
-                const Spacer(),
-
-                /// BOTTOM
-                              /// BOTTOM
-                Row(
-                  children: [
-                    /// UNIT (LEFT SIDE)
-                    Text(
-                      product.unit?.isNotEmpty == true
-                          ? product.unit!
-                          : "1 pcs",
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                ),
+                
+                const SizedBox(width: 4), 
+                
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-
-                    const Spacer(),
-
-                    /// ICON + TEXT (RIGHT SIDE)
-                    Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          product.productType == "fresh"
-                              ? Icons.access_time
-                              : Icons.event,
-                          size: 14,
-                          color: product.productType == "fresh"
-                              ? Colors.green
-                              : Colors.orange,
+                          product.productType == "fresh" ? Icons.shutter_speed_outlined : Icons.event_available,
+                          size: 12,
+                          color: product.productType == "fresh" ? Colors.green.shade600 : Colors.orange.shade600,
                         ),
-
-                        const SizedBox(width: 4),
-
-                        Text(
-                          product.productType == "fresh"
-                              ? (product.freshText ?? "Fresh")
-                              : (product.expiryText ?? ""),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:  TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            product.productType == "fresh" 
+                                ? (product.freshText ?? "1 hrs") 
+                                : (product.expiryText ?? ""),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: product.productType == "fresh" ? Colors.green.shade600 : Colors.orange.shade600,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                )
+                  ),
+                ),
               ],
-            ),
-          ),
+            )
+          ],
         ),
       ),
     );

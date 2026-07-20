@@ -1,123 +1,414 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+
 import 'package:tin/data/models/location_model.dart';
 import 'package:tin/data/services/location_service.dart';
 
+import 'package:tin/modules/home/home_controller.dart';
+
+
 
 class LocationController extends GetxController {
-  final LocationService service = LocationService();
-  final GetStorage box = GetStorage();
 
-  RxBool isLoading = false.obs;
 
-  RxList<LocationModel> locations = <LocationModel>[].obs;
+  final LocationService service =
+      LocationService();
 
-  RxString selectedDistrict = "".obs;
-  RxString selectedDivision = "".obs;
-  RxInt deliveryCharge = 0.obs;
+
+
+  final GetStorage box =
+      GetStorage();
+
+
+
+
+  RxBool isLoading =
+      false.obs;
+
+
+
+  RxList<LocationModel> locations =
+      <LocationModel>[].obs;
+
+
+
+
+  RxString selectedDistrict =
+      "".obs;
+
+
+
+  RxString selectedDivision =
+      "".obs;
+
+
+
+  RxInt deliveryCharge =
+      0.obs;
+
+
+
+
+
 
   @override
   void onInit() {
+
     super.onInit();
 
-    loadFromCache();      // 1️⃣ instant UI
-    fetchLocations();     // 2️⃣ background sync
+
+    loadFromCache();
+
+
+    fetchLocations();
+
+
   }
 
+
+
+
+
+
+
   // =========================
-  // LOCAL CACHE LOAD (FAST UI)
+  // LOCAL CACHE LOAD
   // =========================
+
+
   void loadFromCache() {
+
+
     selectedDistrict.value =
         box.read("locationDistrict") ?? "";
+
+
 
     selectedDivision.value =
         box.read("locationDivision") ?? "";
 
+
+
     deliveryCharge.value =
         box.read("deliveryCharge") ?? 0;
+
+
   }
 
+
+
+
+
+
+
+
   // =========================
-  // FETCH FROM API
+  // FETCH LOCATIONS
   // =========================
+
+
   Future<void> fetchLocations() async {
+
+
     try {
+
+
       isLoading.value = true;
 
-      final cached = box.read("locations");
 
-      // 1️⃣ show cached first (instant)
-      if (cached != null) {
-        locations.value = (cached as List)
-            .map((e) => LocationModel.fromJson(e))
-            .toList();
+
+
+      final cached =
+          box.read("locations");
+
+
+
+      // CACHE FIRST
+
+      if(cached != null){
+
+
+        locations.value =
+            (cached as List)
+                .map(
+                  (e)=>
+                      LocationModel.fromJson(e),
+                )
+                .toList();
+
+
       }
 
-      // 2️⃣ get from API
-      final data = await service.getLocations();
 
-      final parsed = data
-          .map<LocationModel>(
-            (e) => LocationModel.fromJson(e),
-          )
-          .where((e) => e.isActive)
-          .toList();
 
-      locations.value = parsed;
 
-      // 3️⃣ save cache
-      box.write("locations", data);
 
-      // 4️⃣ auto select first location
-      if (box.read("locationId") == null &&
-          locations.isNotEmpty) {
-        await selectLocation(locations.first);
-      } else {
+      // API CALL
+
+
+      final data =
+          await service.getLocations();
+
+
+
+
+      final parsed =
+          data
+              .map<LocationModel>(
+                (e)=>
+                    LocationModel.fromJson(e),
+              )
+              .where(
+                (e)=>e.isActive,
+              )
+              .toList();
+
+
+
+
+      locations.value =
+          parsed;
+
+
+
+
+      // SAVE CACHE
+
+
+      box.write(
+        "locations",
+        data,
+      );
+
+
+
+
+
+
+      // AUTO SELECT FIRST LOCATION
+
+
+      if(
+        box.read("locationId")==null &&
+        locations.isNotEmpty
+      ){
+
+
+        await selectLocation(
+          locations.first,
+        );
+
+
+      }else{
+
+
         loadFromCache();
+
+
       }
 
-    } catch (e) {
-      // fallback cache
-      final cached = box.read("locations");
 
-      if (cached != null) {
-        locations.value = (cached as List)
-            .map((e) => LocationModel.fromJson(e))
-            .toList();
+
+
+    }catch(e){
+
+
+
+      print(
+        "Location Error : $e",
+      );
+
+
+
+      // FALLBACK CACHE
+
+
+      final cached =
+          box.read("locations");
+
+
+
+      if(cached != null){
+
+
+        locations.value =
+            (cached as List)
+                .map(
+                  (e)=>
+                      LocationModel.fromJson(e),
+                )
+                .toList();
+
+
       }
 
-    } finally {
-      isLoading.value = false;
+
+
+    }finally{
+
+
+      isLoading.value =
+          false;
+
+
     }
+
+
   }
+
+
+
+
+
+
+
+
 
   // =========================
   // SELECT LOCATION
   // =========================
-  Future<void> selectLocation(LocationModel location) async {
-    await box.write("locationId", location.id);
-    await box.write("locationDistrict", location.district);
-    await box.write("locationDivision", location.division);
-    await box.write("deliveryCharge", location.deliveryCharge);
 
-    selectedDistrict.value = location.district;
-    selectedDivision.value = location.division;
-    deliveryCharge.value = location.deliveryCharge;
+
+  Future<void> selectLocation(
+      LocationModel location,
+  ) async {
+
+
+
+    await box.write(
+      "locationId",
+      location.id,
+    );
+
+
+
+    await box.write(
+      "locationDistrict",
+      location.district,
+    );
+
+
+
+    await box.write(
+      "locationDivision",
+      location.division,
+    );
+
+
+
+    await box.write(
+      "deliveryCharge",
+      location.deliveryCharge,
+    );
+
+
+
+
+    selectedDistrict.value =
+        location.district;
+
+
+
+    selectedDivision.value =
+        location.division;
+
+
+
+    deliveryCharge.value =
+        location.deliveryCharge;
+
+
+
+
+
+
+    // =========================
+    // RELOAD PRODUCTS
+    // AFTER LOCATION CHANGE
+    // =========================
+
+
+    if(Get.isRegistered<HomeController>()){
+
+
+      await Get.find<HomeController>()
+          .changeLocationReload();
+
+
+    }
+
+
+
+
   }
+
+
+
+
+
+
+
+
+  // =========================
+  // GET CURRENT LOCATION ID
+  // =========================
+
+
+  String get currentLocationId {
+
+
+    return box.read(
+      "locationId",
+    ) ?? "";
+
+
+  }
+
+
+
+
+
+
+
 
   // =========================
   // UI HELPER
   // =========================
+
+
   String get currentLocation {
-    if (selectedDistrict.value.isNotEmpty) {
+
+
+
+    if(
+      selectedDistrict.value.isNotEmpty
+    ){
+
       return selectedDistrict.value;
+
     }
 
-    if (locations.isNotEmpty) {
+
+
+
+    if(locations.isNotEmpty){
+
+
       return locations.first.district;
+
+
     }
+
+
+
+
 
     return "Location";
+
+
   }
+
+
+
+
 }

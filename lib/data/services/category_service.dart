@@ -14,15 +14,27 @@ class CategoryService {
     return res.data;
   }
 
-  Future<dynamic> getProductsByCategory(String categoryId) async {
-  print("CATEGORY ID => $categoryId");
+Future<dynamic> getProductsByCategory(
+  String categoryId,
+  String locationId,
+) async {
 
-  final res = await DioClient.dio.get(
+
+  final res =
+  await DioClient.dio.get(
+
     "/categories/$categoryId/products",
+
+    queryParameters: {
+
+      "location": locationId,
+
+    },
+
   );
 
-  print("PRODUCT RESPONSE => ${res.data}");
 
   return res.data;
+
 }
 }

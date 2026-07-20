@@ -9,139 +9,365 @@ import 'package:tin/data/models/product_model.dart';
 import 'package:tin/data/services/home_service.dart';
 
 import 'package:tin/modules/cart/cart_controller.dart';
+import 'package:tin/modules/location/location_controller.dart';
+
+
 
 class HomeController extends GetxController {
-  final HomeService service = HomeService();
+
+
+  final HomeService service =
+      HomeService();
+
+
 
   final SocketService socketService =
       SocketService();
 
-  RxBool isLoading = false.obs;
 
-  RxBool isRefreshing = false.obs;
+
+  late LocationController locationController;
+
+
+
+
+  RxBool isLoading =
+      false.obs;
+
+
+  RxBool isRefreshing =
+      false.obs;
+
+
+
 
   RxList<BannerModel> banners =
       <BannerModel>[].obs;
 
+
+
   RxList<CategoryModel> categories =
       <CategoryModel>[].obs;
+
+
 
   RxList<ProductModel> products =
       <ProductModel>[].obs;
 
+
+
+
+
+
+
   @override
   void onInit() {
+
+
     super.onInit();
 
-    Get.find<CartController>()
-        .loadServerCart();
+
+
+    print(
+      "🏠 HOME CONTROLLER INIT",
+    );
+
+
+
+    // ==========================
+    // LOCATION CONTROLLER
+    // ==========================
+
+
+    if(Get.isRegistered<LocationController>()){
+
+
+      locationController =
+          Get.find<LocationController>();
+
+
+    }else{
+
+
+      Get.put(
+        LocationController(),
+      );
+
+
+      locationController =
+          Get.find<LocationController>();
+
+    }
+
+
+
+
+
+    // ==========================
+    // CART LOAD
+    // ==========================
+
+
+    if(Get.isRegistered<CartController>()){
+
+
+      Get.find<CartController>()
+          .loadServerCart();
+
+
+    }
+
+
+
+
+
+
+    // ==========================
+    // FIRST HOME LOAD
+    // ==========================
+
 
     loadHomeData();
 
+
+
+
+
+
+
+    // ==========================
     // SOCKET CONNECT
+    // ==========================
+
+
     socketService.connect();
 
-    // LISTEN HOME UPDATE EVENT
-    socketService.listenHomeUpdated(
-      (_) async {
-        print(
-          '🔥 HOME UPDATED EVENT RECEIVED',
-        );
 
-        isRefreshing.value = true;
 
-        await loadHomeData();
 
-        await Future.delayed(
-          const Duration(
-            seconds: 1,
-          ),
-        );
 
-        isRefreshing.value = false;
-      },
+
+
+    // ==========================
+    // HOME UPDATE LISTENER
+    // ==========================
+
+
+socketService.listenHomeUpdated(
+  (_) async {
+
+
+    print(
+      "🔥 HOME UPDATE RECEIVED",
     );
+
+
+    // NO LOADER
+    await loadHomeData(
+      showLoader:false,
+    );
+
+
+  },
+);
+
+
   }
 
-  // =========================
+
+
+
+
+
+
+
+
+  // ==========================
   // LOAD HOME DATA
-  // =========================
+  // ==========================
 
-  Future<void> loadHomeData() async {
-    try {
+
+Future<void> loadHomeData({
+  bool showLoader = true,
+}) async {
+
+  try {
+
+
+    if(showLoader){
       isLoading.value = true;
-
-      // =========================
-      // BANNERS
-      // =========================
-
-      final bannerData =
-          await service.getBanners();
-
-      banners.value =
-          (bannerData as List)
-              .map(
-                (e) =>
-                    BannerModel.fromJson(e),
-              )
-              .toList();
-
-      // =========================
-      // MAIN CATEGORIES
-      // =========================
-
-      final categoryData =
-          await service
-              .getMainCategories();
-
-      categories.value =
-          (categoryData as List)
-              .map(
-                (e) =>
-                    CategoryModel.fromJson(
-                      e,
-                    ),
-              )
-              .toList();
-
-      // =========================
-      // PRODUCTS
-      // =========================
-
-      final productData =
-          await service.getProducts();
-
-      products.value =
-          (productData as List)
-              .map(
-                (e) =>
-                    ProductModel.fromJson(
-                      e,
-                    ),
-              )
-              .toList();
-    } catch (e) {
-      print(
-        "❌ Home Load Error: $e",
-      );
-
-      Get.snackbar(
-        "Error",
-        "Failed to load home data",
-      );
-    } finally {
-      isLoading.value = false;
     }
+
+
+
+    // ==========================
+    // BANNER
+    // ==========================
+
+    final bannerData =
+        await service.getBanners();
+
+
+    banners.assignAll(
+      (bannerData as List)
+          .map(
+            (e)=>BannerModel.fromJson(e),
+          )
+          .toList(),
+    );
+
+
+
+
+    // ==========================
+    // CATEGORY
+    // ==========================
+
+
+    final categoryData =
+        await service.getMainCategories();
+
+
+
+    categories.assignAll(
+      (categoryData as List)
+          .map(
+            (e)=>CategoryModel.fromJson(e),
+          )
+          .toList(),
+    );
+
+
+
+
+
+
+    // ==========================
+    // PRODUCTS
+    // ==========================
+
+
+    String? locationId;
+
+
+    if(Get.isRegistered<LocationController>()){
+
+      locationId =
+          locationController.box.read(
+            "locationId",
+          );
+
+    }
+
+
+
+    final productData =
+        await service.getProducts(
+          locationId: locationId,
+        );
+
+
+
+    products.assignAll(
+
+      (productData as List)
+          .map(
+            (e)=>ProductModel.fromJson(e),
+          )
+          .toList(),
+
+    );
+
+
+
+
+  }catch(e){
+
+
+    print(
+      "HOME LOAD ERROR $e",
+    );
+
+
+  }finally{
+
+
+    if(showLoader){
+
+      isLoading.value=false;
+
+    }
+
+
   }
 
-  // =========================
-  // MANUAL REFRESH
-  // =========================
+}
 
-  Future<void> refreshHome() async {
+
+
+
+
+
+
+
+  // ==========================
+  // LOCATION CHANGE
+  // ==========================
+
+
+  Future<void> changeLocationReload() async {
+
+
+
     isRefreshing.value = true;
 
+
+
     await loadHomeData();
+
+
+
+
+    await Future.delayed(
+      const Duration(
+        milliseconds: 500,
+      ),
+    );
+
+
+
+    isRefreshing.value = false;
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+  // ==========================
+  // MANUAL REFRESH
+  // ==========================
+
+
+  Future<void> refreshHome() async {
+
+
+
+    isRefreshing.value = true;
+
+
+
+
+    await loadHomeData();
+
+
+
 
     await Future.delayed(
       const Duration(
@@ -149,13 +375,29 @@ class HomeController extends GetxController {
       ),
     );
 
+
+
     isRefreshing.value = false;
+
+
+
   }
 
-  @override
-  void onClose() {
-    socketService.dispose();
 
-    super.onClose();
-  }
+
+
+
+
+
+
+
+@override
+void onClose() {
+
+  super.onClose();
+
+}
+
+
+
 }

@@ -18,6 +18,8 @@ class CartItemModel {
   int quantity;
   bool isEditing;
   Timer? timer;
+  bool isSyncing;
+  final bool isActive;
 
   CartItemModel({
     required this.id,
@@ -30,6 +32,8 @@ class CartItemModel {
     this.quantity = 1,
     this.isEditing = true,
     this.timer,
+    this.isSyncing = false,
+    this.isActive = true,
   });
 
   /// 🟢 GET LOCALIZED TITLE (BEST PRACTICE)
@@ -102,6 +106,7 @@ class CartItemModel {
       originalPrice: json["originalPrice"] ?? 0,
       quantity: json["quantity"] ?? 1,
       isEditing: false,
+      isActive: json["product"]?["isActive"] ?? true,
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:tin/controller/language_controller.dart';
+import 'package:tin/core/socket/socket_service.dart';
 import 'package:tin/data/models/cart_item_model.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/data/services/cart_service.dart';
@@ -13,6 +14,8 @@ class CartController extends GetxController {
   final lang = Get.find<LanguageController>();
 
   final CartService cartService = CartService();
+  final SocketService socketService = SocketService();
+  final RxBool isLoading = false.obs;
 
   final box = GetStorage();
 
@@ -25,7 +28,34 @@ void onInit() {
   super.onInit();
 
   loadGuestCart();
+
+  socketService.connect();
+
+socketService.listenCartUpdated((_) async {
+
+  print("🔥 CART UPDATED");
+
+
+  final auth =
+      Get.find<AuthController>();
+
+
+  if(auth.isLoggedIn.value){
+
+    await loadServerCart();
+
+
+    // force UI update
+    cartItems.refresh();
+
+  }
+
+
+});
+
 }
+
+
 
 // ...........SaveGuest cart 
 
@@ -99,21 +129,61 @@ Future<void> loadServerCart() async {
 
   try {
 
-    final data =
-        await cartService.getCart();
+    final data = await cartService.getCart();
 
-    cartItems.value =
-        data.map<CartItemModel>(
-      (e) =>
-          CartItemModel.fromJson(
-        e,
-      ),
-    ).toList();
+    final oldEditing = {
+      for (final item in cartItems)
+        item.id: item.isEditing,
+    };
+
+    final oldSyncing = {
+      for (final item in cartItems)
+        item.id: item.isSyncing,
+    };
+
+    final List<CartItemModel> items =
+        data.map<CartItemModel>((e) {
+
+      final item = CartItemModel.fromJson(e);
+
+      item.isEditing =
+          oldEditing[item.id] ?? false;
+
+      item.isSyncing =
+          oldSyncing[item.id] ?? false;
+
+      return item;
+
+    }).toList();
+
+    // 🔥 inactive product remove
+    items.removeWhere((item) {
+
+      final json = data.firstWhere(
+        (e) =>
+            e["product"]?["_id"] ==
+            item.id,
+      );
+
+      return json["product"] == null ||
+          json["product"]["isActive"] ==
+              false;
+    });
+
+    cartItems.assignAll(items);
+
+    cartItems.refresh();
 
   } catch (e) {
 
     print(e);
+
+  }finally {
+
+    isLoading.value = false;
+
   }
+
 }
 
   /// GET ITEM
@@ -134,28 +204,44 @@ Future<void> addToCart(
       Get.find<AuthController>();
 
   /// LOGIN USER
-  if (auth.isLoggedIn.value) {
+if (auth.isLoggedIn.value) {
 
-    try {
+  final newItem = CartItemModel(
+    id: product.id,
+    cartId: null,
 
-      await cartService.addToCart(
-        product.id,
-        1,
-      );
+    titleBn: product.titleBn,
+    titleEn: product.titleEn,
 
-      await loadServerCart();
+    image: product.images.isNotEmpty
+        ? product.images.first
+        : "",
+
+    price: product.currentPrice,
+    originalPrice: product.price,
+
+    quantity: 1,
+
+    // সাথে সাথে control দেখাবে
+    isEditing: true,
+    isSyncing: true,
+  );
 
 
-    } catch (e) {
+  cartItems.add(newItem);
 
-      Get.snackbar(
-        "Error",
-        e.toString(),
-      );
-    }
+  cartItems.refresh();
 
-    return;
-  }
+
+  _autoHide(newItem);
+
+
+  // Background server sync
+  _addToServer(product);
+
+
+  return;
+}
 
   /// GUEST USER
 
@@ -200,17 +286,16 @@ void increment(String id) async {
   final auth = Get.find<AuthController>();
   final item = getItem(id);
   if (item == null) return;
+  if(item.isSyncing){
+  return;
+}
 
   item.quantity++;
   item.isEditing = true;
   cartItems.refresh();
 
   if (auth.isLoggedIn.value) {
-    await cartService.updateQuantity(
-      item.cartId!,
-      item.quantity,
-    );
-    await loadServerCart();
+    _updateServerQuantity(item);
   } else {
     await saveGuestCart();
   }
@@ -223,6 +308,9 @@ void decrement(String id) async {
   final auth = Get.find<AuthController>();
   final item = getItem(id);
   if (item == null) return;
+  if(item.isSyncing){
+  return;
+}
 
   if (item.quantity <= 1) {
     await removeItem(id);
@@ -234,11 +322,7 @@ void decrement(String id) async {
   cartItems.refresh();
 
   if (auth.isLoggedIn.value) {
-    await cartService.updateQuantity(
-      item.cartId!,
-      item.quantity,
-    );
-    await loadServerCart();
+_updateServerQuantity(item);
   } else {
     await saveGuestCart();
   }
@@ -259,13 +343,23 @@ void decrement(String id) async {
   /// AUTO HIDE EDIT CONTROLS
   void _autoHide(CartItemModel item) {
     item.timer?.cancel();
-    item.timer = Timer(
-      const Duration(seconds: 4),
-      () {
-        item.isEditing = false;
-        cartItems.refresh();
-      },
-    );
+item.timer = Timer(
+  const Duration(seconds: 6),
+  () {
+
+    final current =
+        getItem(item.id);
+
+    if (current != null) {
+
+      current.isEditing = false;
+
+      cartItems.refresh();
+
+    }
+
+  },
+);
   }
 
   /// REMOVE ITEM
@@ -275,10 +369,24 @@ Future<void> removeItem(String id) async {
   final item = getItem(id);
   if (item == null) return;
 
-  if (auth.isLoggedIn.value && item.cartId != null) {
-    await cartService.removeItem(item.cartId!);
-    await loadServerCart();
-  } else {
+if (auth.isLoggedIn.value && item.cartId != null) {
+
+    // আগে UI থেকে সরান
+    cartItems.removeWhere(
+      (e) => e.id == id,
+    );
+
+    cartItems.refresh();
+
+
+    // তারপর server এ delete
+    await cartService.removeItem(
+      item.cartId!,
+    );
+
+
+    // এখানে loadServerCart করবেন না
+} else {
     cartItems.removeWhere((e) => e.id == id);
     await saveGuestCart();
   }
@@ -345,7 +453,75 @@ Future<void> decreaseServerQty(
   await loadServerCart();
 }
 
+////////////////////////////////////////////////////////////////
+Future<void> _updateServerQuantity(
+  CartItemModel item,
+) async {
 
+  try {
+
+    await cartService.updateQuantity(
+      item.cartId!,
+      item.quantity,
+    );
+
+  } catch(e){
+
+    item.quantity--;
+
+    cartItems.refresh();
+
+    //Get.snackbar(
+    //  "Error",
+    //  "Quantity update failed",
+    //);
+  }
+}
+
+///////////////////////////////////////////////////////////
+Future<void> _addToServer(
+  ProductModel product,
+) async {
+
+  try {
+
+    await cartService.addToCart(
+      product.id,
+      1,
+    );
+
+    await loadServerCart();
+
+    final item = getItem(product.id);
+
+    if(item != null){
+      item.isSyncing = false;
+      cartItems.refresh();
+    }
+
+    showControls(product.id);
+
+  } catch(e) {
+
+
+    cartItems.removeWhere(
+      (item)=> item.id == product.id,
+    );
+
+
+    cartItems.refresh();
+
+
+    Get.snackbar(
+      "Error",
+      "Add failed",
+    );
+
+  }
+}
+
+
+/// CLEAR LOCAL CART
 /// CLEAR LOCAL CART
 Future<void> clearCart() async {
 
@@ -364,5 +540,15 @@ Future<void> clearCart() async {
   print(
     "After Clear: ${cartItems.length}",
   );
+}
+
+
+@override
+void onClose() {
+
+  socketService.dispose();
+
+  super.onClose();
+
 }
 }
