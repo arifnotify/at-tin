@@ -9,10 +9,10 @@ class AppRoutes {
   static const address = "/address";
   static const ordersuccess = "/order-success";
   static const ordersummary = "/order-summary";
-
   static const subCategory = "/sub-category";
   static const String allCategories = "/allCategories";
   static const search = "/search";
   static const trackingOrders = "/tracking-orders";
   static const tracking = "/tracking/:id";
+  static const payment = "/payment";
 }

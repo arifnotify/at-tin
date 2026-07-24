@@ -15,6 +15,7 @@ import 'package:tin/modules/order/order_success_page.dart';
 import 'package:tin/modules/order/order_summary_page.dart';
 import 'package:tin/modules/order/tracking_orders_page.dart';
 import 'package:tin/modules/order/tracking_page.dart';
+import 'package:tin/modules/payment/payment_screen.dart';
 import 'package:tin/modules/product/product_details_page.dart';
 import 'package:tin/modules/search/search_screen.dart';
 import 'package:tin/modules/splash/splash_binding.dart';
@@ -54,59 +55,63 @@ class AppPages {
       page: () => OtpPage(),
     ),
 
-   /* GetPage(
+    GetPage(
       name: AppRoutes.address,
       page: () => const AddressPage(),
-    ),*/
+    ),
 
     GetPage(
       name: AppRoutes.ordersuccess,
       page: () => const OrderSuccessPage(),
     ),
 
-  /*  GetPage(
+    GetPage(
       name: AppRoutes.ordersummary,
       page: () => const OrderSummaryPage(),
-    ),*/
+    ),
 
-    // NEW PAGE
     GetPage(
       name: AppRoutes.subCategory,
       page: () => SubCategoryPage(),
     ),
 
-      GetPage(
+    GetPage(
       name: AppRoutes.allCategories,
       page: () => const AllCategoriesPage(),
     ),
 
     GetPage(
-  name:
-      AppRoutes.search,
-  page: () =>
-      SearchScreen(),
-  binding:
-      SearchBinding(),
-),
+      name: AppRoutes.search,
+      page: () => SearchScreen(),
+      binding: SearchBinding(),
+    ),
 
-GetPage(
-  name: AppRoutes.trackingOrders,
-  page: () => const TrackingOrdersPage(),
-),
+    GetPage(
+      name: AppRoutes.trackingOrders,
+      page: () => const TrackingOrdersPage(),
+    ),
 
-GetPage(
-  name: AppRoutes.tracking,
-  page: () {
-    final orderId = Get.parameters['id'];
+    GetPage(
+      name: AppRoutes.tracking,
+      page: () {
+        final orderId = Get.parameters['id'];
 
-    if (orderId == null) {
-      return const Scaffold(
-        body: Center(child: Text("No Order ID Found")),
-      );
-    }
+        if (orderId == null) {
+          return const Scaffold(
+            body: Center(child: Text("No Order ID Found")),
+          );
+        }
 
-    return OrderTrackingPage(orderId: orderId);
-  },
-),
+        return OrderTrackingPage(orderId: orderId);
+      },
+    ),
+
+    GetPage(
+      name: AppRoutes.payment,
+      page: () {
+        final String paymentUrl = Get.arguments as String? ?? '';
+        return PaymentDialog(paymentUrl: paymentUrl);
+      },
+    ),
   ];
 }

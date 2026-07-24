@@ -8,7 +8,7 @@ Future<dynamic> createOrder(
   String addressId, {
   bool useReward = false,
   double rewardAmount = 0,
-  double deliveryCharge = 0,
+  double deliveryCharge = 0, required String paymentMethod,
 }) async {
   final response = await DioClient.dio.post(
     "/orders",
@@ -17,6 +17,7 @@ Future<dynamic> createOrder(
       "useReward": useReward,
       "rewardAmount": rewardAmount,
       "deliveryCharge": deliveryCharge,
+      "paymentMethod": paymentMethod,
     },
   );
 

@@ -262,52 +262,65 @@ class _HomeScreenState extends State<HomeScreen> {
             }),
 
             /// ================= ৪. TRACKING BAR LAYER =================
-            Obx(() {
-              if (!auth.isLoggedIn.value) return const SizedBox();
-              if (!orderController.hasActiveOrder.value) return const SizedBox();
-              if (!trackingController.trackingEnabled.value) return const SizedBox();
+Obx(() {
+  if (!auth.isLoggedIn.value) return const SizedBox();
+  if (!orderController.hasActiveOrder.value) return const SizedBox();
+  if (!trackingController.trackingEnabled.value) return const SizedBox();
 
-              return Positioned(
-                left: 15,
-                right: 15,
-                bottom: 20,
-                child: orderController.isTrackingMinimized.value
-                    ? Align(
-                        alignment: Alignment.bottomRight,
-                        child: GestureDetector(
-                          onTap: () {
-                            orderController.isTrackingMinimized.value = false;
-                          },
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-                            child: const Icon(Icons.delivery_dining, color: Colors.white),
-                          ),
-                        ),
-                      )
-                    : Stack(
-                        children: [
-                          const RiderProgressLine(),
-                          Positioned(
-                            top: 5,
-                            right: 5,
-                            child: GestureDetector(
-                              onTap: () {
-                                orderController.isTrackingMinimized.value = true;
-                              },
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
-                                child: const Icon(Icons.close, size: 16, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              );
-            }),
+  return Positioned(
+    left: 15,
+    right: 15,
+    bottom: 20,
+    child: orderController.isTrackingMinimized.value
+        ? Align(
+            alignment: Alignment.bottomRight,
+            child: GestureDetector(
+              onTap: () {
+                orderController.isTrackingMinimized.value = false;
+              },
+              child: Container(
+                width: 55,
+                height: 55,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delivery_dining, color: Colors.white),
+              ),
+            ),
+          )
+        : Stack(
+            clipBehavior: Clip.none, // ক্রস আইকন যেন বাইরে সুন্দর দেখায়
+            children: [
+              // প্রোগ্রেস লাইনের ডানপাশে প্যাডিং দেওয়া হয়েছে যেন ক্রসের নিচে না পড়ে
+              const Padding(
+                padding: EdgeInsets.only(top: 12, right: 15),
+                child: RiderProgressLine(),
+              ),
+
+              /// ================= CLOSE BUTTON =================
+              Positioned(
+                top: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () {
+                    orderController.isTrackingMinimized.value = true;
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+  );
+}),
 
             /// ================= ৫. CUSTOM DRAWERS WITH EXACT BOUNDS =================
             if (_isDrawerOpen.value)

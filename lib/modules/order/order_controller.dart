@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/data/services/order_service.dart';
@@ -5,6 +6,7 @@ import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/location/location_controller.dart';
 import 'package:tin/modules/order/order_tracking_controller.dart';
+import 'package:tin/modules/payment/payment_screen.dart';
 
 class OrderController extends GetxController {
   final OrderService service = OrderService();
@@ -35,18 +37,20 @@ class OrderController extends GetxController {
   void onInit() {
     super.onInit();
     
-    // অ্যাপ ওপেন হওয়ার সময় যদি AuthController ইতিমধ্যেই লগইন স্টেট কনফার্ম করে ফেলে, তবে ডাটা লোড হবে।
-    // নিরাপদ থাকার জন্য আমরা মূল ডাটা লোডিং কলটি AuthController-এর checkLogin থেকেও ট্রিগার করে দিয়েছি।
+    // অ্যাপ ওপেন হওয়ার সময় যদি AuthController ইতিমধ্যেই লগইন স্টেট কনফার্ম করে ফেলে, তবে ডাটা লোড হবে।
     if (Get.find<AuthController>().isLoggedIn.value) {
       loadActiveOrders();
       loadRewardWallet();
     }
   }
 
-  // =========================
+  // =========================================================
   // PLACE ORDER
-  // =========================
-  Future<void> placeOrder(String addressId) async {
+  // =========================================================
+  Future<bool> placeOrder(
+    String addressId, {
+    required String paymentMethod,
+  }) async {
     final cart = Get.find<CartController>();
 
     try {
@@ -56,43 +60,93 @@ class OrderController extends GetxController {
         await cart.loadServerCart();
       }
 
-      final order = await service.createOrder(
+      // ব্যাকএন্ডে অর্ডার ইনিশিলাইজেশন
+      final response = await service.createOrder(
         addressId,
         useReward: useReward.value,
         rewardAmount: rewardAmount.value,
         deliveryCharge: Get.find<LocationController>().deliveryCharge.value.toDouble(),
+        paymentMethod: paymentMethod,
       );
 
-      if (order == null || order["_id"] == null) {
-        throw "Order creation failed";
+      // ==========================================
+      // 1. SSLCOMMERZ FLOW
+      // ==========================================
+      if (response["paymentMethod"] == "SSLCOMMERZ" && response["paymentUrl"] != null) {
+
+        final result = await Get.dialog<bool>(
+          PaymentDialog(paymentUrl: response["paymentUrl"]),
+          barrierDismissible: false,
+        );
+
+        // ❌ পেমেন্ট ক্যানসেল বা ফেইল হলে
+        if (result != true) {
+          Get.snackbar(
+            "Payment Incomplete",
+            "পেমেন্ট সম্পন্ন হয়নি। আপনার কার্টের আইটেমগুলো সুরক্ষিত আছে।",
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.orange.shade800,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(12),
+          );
+          return false; // ইউজার Order Summary পেজেই থাকবে
+        }
+        
+        // ✅ পেমেন্ট সফল হলে সাকসেস হ্যান্ডলার ফায়ার হবে
+        await _handleSuccessResponse();
+        return true;
+      } 
+      
+      // ==========================================
+      // 2. COD FLOW
+      // ==========================================
+      else {
+        await _handleSuccessResponse();
+        return true;
       }
 
-      await cart.clearCart();
-      await loadActiveOrders();
-      await loadRewardWallet();
-
-      useReward.value = false;
-      rewardAmount.value = 0;
-
-      Get.offAllNamed(AppRoutes.ordersuccess);
     } catch (e) {
       Get.snackbar(
         "Order Error",
         e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(12),
       );
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
+  // ==========================================
+  // HANDLE SUCCESS RESPONSE & NAVIGATION (FIXED)
+  // ==========================================
+Future<void> _handleSuccessResponse() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // 🎯 নেমড রুটে অতিরিক্ত পারামিটার বাদ দিয়ে
+    Get.offAllNamed(AppRoutes.ordersuccess);
+
+    Future.microtask(() async {
+      final cart = Get.find<CartController>();
+      await cart.clearCart();
+      await loadActiveOrders();
+      await loadRewardWallet();
+
+      useReward.value = false;
+      rewardAmount.value = 0.0;
+    });
+  }
+
   // =========================
-  // LOAD REWARD WALLET (UPDATED)
+  // LOAD REWARD WALLET
   // =========================
   Future<void> loadRewardWallet() async {
     try {
       final auth = Get.find<AuthController>();
 
-      // টোকেন বা ইউজার আইডি না থাকলে রিকোয়েস্ট স্কিপ করবে
       final userId = auth.user["_id"]?.toString();
       if (userId == null || userId.isEmpty) return;
 
@@ -104,11 +158,10 @@ class OrderController extends GetxController {
   }
 
   // =========================
-  // LOAD ACTIVE ORDERS (UPDATED)
+  // LOAD ACTIVE ORDERS
   // =========================
   Future<void> loadActiveOrders() async {
     try {
-      // ইউজার লগইন না থাকলে অহেতুক API কল করা বন্ধ করবে
       if (!Get.find<AuthController>().isLoggedIn.value) return;
 
       final orders = await service.getMyOrders();
@@ -120,7 +173,6 @@ class OrderController extends GetxController {
 
       activeOrders.value = active;
 
-      /// ❌ NO ACTIVE ORDER
       if (active.isEmpty) {
         clearTracking();
         hasActiveOrder.value = false;
@@ -130,26 +182,22 @@ class OrderController extends GetxController {
 
       hasActiveOrder.value = true;
 
-      /// 🔥 DEFAULT SELECT
       if (selectedOrderId.value.isEmpty) {
         selectedOrderId.value = active.first["_id"];
       }
 
-      /// 🔥 CHECK IF SELECTED STILL EXISTS
       final exists = active.any((e) => e["_id"] == selectedOrderId.value);
 
       if (!exists) {
         selectedOrderId.value = active.first["_id"];
       }
 
-      /// 🔥 GET SELECTED ORDER
       final selected = active.firstWhereOrNull((e) => e["_id"] == selectedOrderId.value);
       if (selected == null) return;
 
       trackingEnabled.value = selected["trackingEnabled"] ?? false;
       activeOrderStatus = selected["orderStatus"];
 
-      /// 🔥 IMPORTANT: auto restart tracking
       if (trackingEnabled.value) {
         Get.find<OrderTrackingController>().startTracking(selectedOrderId.value);
       }
@@ -173,11 +221,7 @@ class OrderController extends GetxController {
       activeOrderStatus = selected["orderStatus"];
 
       final tracking = Get.find<OrderTrackingController>();
-
-      /// Stop Previous Tracking
       tracking.stopTracking();
-
-      /// Start Selected Order Tracking
       tracking.startTracking(orderId);
     }
   }
@@ -246,7 +290,6 @@ class OrderController extends GetxController {
 
       hasActiveOrder.value = true;
 
-      /// DEFAULT ORDER
       if (selectedOrderId.value.isEmpty) {
         selectedOrderId.value = activeOrdersList.first["_id"];
       }

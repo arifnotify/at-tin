@@ -19,7 +19,7 @@ class AppDrawer extends StatelessWidget {
   final SupportController supportController = Get.put(SupportController());
   final RewardController rewardController = Get.find<RewardController>();
 
-  // See More ট্র্যাকিং করার জন্য Reactive Observable ভেরিয়েবল
+  // See More ট্র্যাকিং করার জন্য Reactive Observable ভেরিয়েবল
   final RxBool _showAllTransactions = false.obs;
 
   /// ================= OPEN URL =================
@@ -161,7 +161,6 @@ class AppDrawer extends StatelessWidget {
                         children: orders.map<Widget>((order) {
                           final items = order["items"] ?? [];
 
-                          // finalAmount-কে দশমিকের পর ২ ঘর ফিক্সড করা হয়েছে
                           final rawAmount = order["finalAmount"] ?? 0;
                           final formattedAmount = double.parse(rawAmount.toString()).toStringAsFixed(2);
 
@@ -187,6 +186,18 @@ class AppDrawer extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.bold, color: primaryGolden, fontSize: 12),
                               ),
                               children: items.map<Widget>((item) {
+                                // productName অবজেক্ট বা স্টریং হ্যান্ডেল করা
+                                final rawProductName = item["productName"];
+                                final String productNameText = (rawProductName is Map)
+                                    ? (isBn ? (rawProductName["bn"] ?? rawProductName["en"] ?? "") : (rawProductName["en"] ?? ""))
+                                    : (rawProductName?.toString() ?? "");
+
+                                // ইউনিট হ্যান্ডেল করা
+                                final rawUnit = item["unit"];
+                                final String unitText = (rawUnit is Map)
+                                    ? (isBn ? (rawUnit["bn"] ?? rawUnit["en"] ?? "") : (rawUnit["en"] ?? ""))
+                                    : (rawUnit?.toString() ?? "");
+
                                 return ListTile(
                                   leading: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
@@ -198,8 +209,13 @@ class AppDrawer extends StatelessWidget {
                                       errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 40),
                                     ),
                                   ),
-                                  title: Text(item["productName"] ?? "", style: const TextStyle(fontSize: 13)),
-                                  subtitle: Text(isBn ? "পরিমাণ: ${item["quantity"]}" : "Qty: ${item["quantity"]}", style: const TextStyle(fontSize: 12)),
+                                  title: Text(productNameText, style: const TextStyle(fontSize: 13)),
+                                  subtitle: Text(
+                                    isBn 
+                                      ? "পরিমাণ: ${item["quantity"]} $unitText" 
+                                      : "Qty: ${item["quantity"]} $unitText", 
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
                                 );
                               }).toList(),
                             ),
@@ -230,7 +246,6 @@ class AppDrawer extends StatelessWidget {
                         final type = tx["type"]?.toString() ?? "";
                         final isEarn = type == "EARN";
 
-                        // transaction amount-কে দশমিকের পর ২ ঘর ফিক্সড করা হয়েছে
                         final rawAmount = tx["amount"] ?? 0;
                         final formattedAmount = double.parse(rawAmount.toString()).toStringAsFixed(2);
 
@@ -243,7 +258,7 @@ class AppDrawer extends StatelessWidget {
                           title: Text("৳$formattedAmount", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                           subtitle: Text(tx["description"]?.toString() ?? "", style: const TextStyle(fontSize: 12)),
                           trailing: Text(
-                            type == "EARN" ? (isBn ? "অর্জিত" : "EARN") : (isBn ? "ব্যয়িত" : "SPENT"),
+                            type == "EARN" ? (isBn ? "অর্জিত" : "EARN") : (isBn ? "ব্যয়িত" : "SPENT"),
                             style: TextStyle(color: isEarn ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         );
@@ -338,7 +353,7 @@ class AppDrawer extends StatelessWidget {
 
                       return _buildExpansionSection(
                         icon: Icons.support_agent,
-                        title: isBn ? "সাহায্য প্রয়োজন?" : "Need Help?",
+                        title: isBn ? "সাহায্য প্রয়োজন?" : "Need Help?",
                         children: [
                           _buildSupportItem(Icons.call, isBn ? "কল করুন" : "Call", Colors.green, () => _callPhone(support.phone)),
                           _buildSupportItem(Icons.message, "WhatsApp", Colors.green, () => _openUrl(support.whatsapp)),
