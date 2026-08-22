@@ -2,23 +2,18 @@ class ProductModel {
   final String id;
 
   final Map<String, dynamic> title;
-
   final Map<String, dynamic> description;
 
   final double price;
-
   final double? discountPrice;
-
   final double? flashSalePrice;
 
   final List<String> images;
 
   final String? unit;
-
   final String? productType;
 
   final String? freshText;
-
   final String? expiryText;
 
   /// 👉 YouTube Video URL
@@ -27,8 +22,11 @@ class ProductModel {
   /// 👉 Category
   final Map<String, dynamic>? category;
 
-  /// 👉 NEW : Product Locations
+  /// 👉 Product Locations
   final List<Map<String, dynamic>> locations;
+
+  /// 👉 Product Country
+  final Map<String, dynamic>? country;
 
   ProductModel({
     required this.id,
@@ -44,214 +42,275 @@ class ProductModel {
     this.expiryText,
     this.youtubeVideoUrl,
     this.category,
-
-    /// NEW
     this.locations = const [],
+    this.country,
   });
 
   factory ProductModel.fromJson(
     Map<String, dynamic> json,
   ) {
+    // =========================
+    // TITLE & DESCRIPTION PARSING (String or Map safely)
+    // =========================
+    Map<String, dynamic> parseLocalMap(dynamic value) {
+      if (value is Map) {
+        return Map<String, dynamic>.from(value);
+      } else if (value is String && value.isNotEmpty) {
+        return {'en': value, 'bn': value};
+      }
+      return {};
+    }
+
+    // =========================
+    // LOCATIONS PARSING
+    // =========================
+    List<Map<String, dynamic>> parsedLocations = [];
+    if (json['locations'] is List) {
+      for (var loc in json['locations']) {
+        if (loc is Map) {
+          parsedLocations.add(Map<String, dynamic>.from(loc));
+        } else if (loc != null) {
+          parsedLocations.add({'_id': loc.toString()});
+        }
+      }
+    }
+
     return ProductModel(
-      id: json['_id'] ?? '',
+      // =========================
+      // BASIC
+      // =========================
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
 
-      title: json['title'] != null
-          ? Map<String, dynamic>.from(
-              json['title'],
-            )
-          : {},
+      title: parseLocalMap(json['title']),
 
-      description:
-          json['description'] != null
-              ? Map<String, dynamic>.from(
-                  json['description'],
-                )
-              : {},
+      description: parseLocalMap(json['description']),
 
-      price:
-          (json['price'] ?? 0).toDouble(),
+      // =========================
+      // PRICE
+      // =========================
+      price: json['price'] != null ? (json['price'] as num).toDouble() : 0.0,
 
-      discountPrice:
-          json['discountPrice'] != null
-              ? (json['discountPrice'])
-                  .toDouble()
-              : null,
+      discountPrice: json['discountPrice'] != null
+          ? (json['discountPrice'] as num).toDouble()
+          : null,
 
-      flashSalePrice:
-          json['flashSalePrice'] != null
-              ? (json['flashSalePrice'])
-                  .toDouble()
-              : null,
+      flashSalePrice: (json['flashSalePrice'] ?? json['salePrice']) != null
+          ? ((json['flashSalePrice'] ?? json['salePrice']) as num).toDouble()
+          : null,
 
+      // =========================
+      // IMAGES
+      // =========================
       images: json['images'] != null
           ? List<String>.from(
-              json['images'],
+              (json['images'] as List).map((e) => e.toString()),
             )
           : [],
 
-      unit: json['unit'] ?? '',
+      // =========================
+      // PRODUCT INFO
+      // =========================
+      unit: json['unit']?.toString() ?? '',
 
-      productType:
-          json['productType'] ??
-              'regular',
+      productType: json['productType']?.toString() ?? 'regular',
 
-      freshText:
-          json['freshText'] ?? '',
+      freshText: json['freshText']?.toString() ?? '',
 
-      expiryText:
-          json['expiryText'] ?? '',
+      expiryText: json['expiryText']?.toString() ?? '',
 
-      youtubeVideoUrl:
-          json['youtubeVideoUrl'],
+      // =========================
+      // YOUTUBE
+      // =========================
+      youtubeVideoUrl: json['youtubeVideoUrl']?.toString(),
 
-      category:
-          json['category'] != null
-              ? Map<String, dynamic>.from(
-                  json['category'],
-                )
-              : null,
+      // =========================
+      // CATEGORY
+      // =========================
+      category: json['category'] is Map
+          ? Map<String, dynamic>.from(json['category'])
+          : (json['category'] != null
+              ? {'_id': json['category'].toString()}
+              : null),
 
-      /// NEW
-      locations:
-          json['locations'] != null
-              ? List<Map<String, dynamic>>.from(
-                  json['locations'].map(
-                    (e) =>
-                        Map<String, dynamic>.from(
-                            e),
-                  ),
-                )
-              : [],
+      // =========================
+      // COUNTRY
+      // =========================
+      country: json['country'] is Map
+          ? Map<String, dynamic>.from(json['country'])
+          : (json['country'] != null
+              ? {'_id': json['country'].toString()}
+              : null),
+
+      // =========================
+      // LOCATIONS
+      // =========================
+      locations: parsedLocations,
     );
   }
-  // =========================
-  // Helper Getters
-  // =========================
 
+  // =========================================================
+  // TITLE HELPERS
+  // =========================================================
 
-  String get titleEn =>
-      title['en'] ?? '';
+  String get titleEn => title['en']?.toString() ?? '';
 
+  String get titleBn => title['bn']?.toString() ?? '';
 
-  String get titleBn =>
-      title['bn'] ?? '';
+  // =========================================================
+  // DESCRIPTION HELPERS
+  // =========================================================
 
+  String get descriptionEn => description['en']?.toString() ?? '';
 
+  String get descriptionBn => description['bn']?.toString() ?? '';
 
-  String get descriptionEn =>
-      description['en'] ?? '';
+  // =========================================================
+  // CATEGORY HELPERS
+  // =========================================================
 
+  String get categoryName {
+    final name = category?['name'];
 
+    if (name is Map) {
+      return name['en']?.toString() ?? '';
+    }
 
-  String get descriptionBn =>
-      description['bn'] ?? '';
+    return name?.toString() ?? '';
+  }
 
+  String get categoryNameEn {
+    final name = category?['name'];
 
+    if (name is Map) {
+      return name['en']?.toString() ?? '';
+    }
 
-  String get categoryName =>
-      category?['name'] ?? '';
+    return name?.toString() ?? '';
+  }
 
+  String get categoryNameBn {
+    final name = category?['name'];
 
+    if (name is Map) {
+      return name['bn']?.toString() ?? '';
+    }
 
-  // =========================
-  // LOCATION HELPERS (NEW)
-  // =========================
+    return name?.toString() ?? '';
+  }
 
+  String get parentCategoryId =>
+      category?['parentCategory']?.toString() ?? '';
 
-  /// সব Location Name
- List<String> get locationNames {
-  return locations
-      .map<String>(
-        (location) =>
-            location['district']?.toString() ?? '',
-      )
-      .toList();
-}
+  // =========================================================
+  // COUNTRY HELPERS
+  // =========================================================
 
+  /// Country ID
+  String get countryId => country?['_id']?.toString() ?? '';
 
+  /// Country Name
+  String get countryName => country?['name']?.toString() ?? '';
 
-  /// Location আছে কিনা চেক
+  /// Country Code
+  String get countryCode => country?['code']?.toString() ?? '';
+
+  /// Country Flag Image URL
+  String get countryFlag => country?['flag']?.toString() ?? '';
+
+  /// Product has country or not
+  bool get hasCountry => country != null && countryName.isNotEmpty;
+
+  /// Product has flag or not
+  bool get hasCountryFlag => countryFlag.isNotEmpty;
+
+  // =========================================================
+  // LOCATION HELPERS
+  // =========================================================
+
+  /// জেলার নাম (English)
+  List<String> get locationNamesEn {
+    return locations.map<String>((location) {
+      final district = location['district'];
+
+      if (district is Map) {
+        return district['en']?.toString() ?? '';
+      }
+
+      return district?.toString() ?? '';
+    }).toList();
+  }
+
+  /// জেলার নাম (Bangla)
+  List<String> get locationNamesBn {
+    return locations.map<String>((location) {
+      final district = location['district'];
+
+      if (district is Map) {
+        return district['bn']?.toString() ?? '';
+      }
+
+      return district?.toString() ?? '';
+    }).toList();
+  }
+
+  /// ভাষা অনুযায়ী জেলার নাম
+  List<String> locationNames(
+    bool isBangla,
+  ) {
+    return locations.map<String>((location) {
+      final district = location['district'];
+
+      if (district is Map) {
+        return isBangla
+            ? (district['bn']?.toString() ?? '')
+            : (district['en']?.toString() ?? '');
+      }
+
+      return district?.toString() ?? '';
+    }).toList();
+  }
+
+  /// Location আছে কিনা
   bool hasLocation(
     String locationId,
   ) {
-
     return locations.any(
-      (location) =>
-          location['_id'] == locationId,
+      (location) => location['_id']?.toString() == locationId,
     );
-
   }
 
-
-
-  // =========================
+  // =========================================================
   // PRICE HELPERS
-  // =========================
-
+  // =========================================================
 
   double get currentPrice {
-
-    if (flashSalePrice != null &&
-        flashSalePrice! > 0) {
-
+    if (flashSalePrice != null && flashSalePrice! > 0) {
       return flashSalePrice!;
-
     }
 
-
-    if (discountPrice != null &&
-        discountPrice! > 0) {
-
+    if (discountPrice != null && discountPrice! > 0) {
       return discountPrice!;
-
     }
-
 
     return price;
-
   }
 
+  bool get hasDiscount => currentPrice < price;
 
-
-  bool get hasDiscount =>
-      currentPrice < price;
-
-
-
-  bool get isFlashSale =>
-      flashSalePrice != null &&
-      flashSalePrice! > 0;
-
-
+  bool get isFlashSale => flashSalePrice != null && flashSalePrice! > 0;
 
   int get discountPercent {
-
-    if (!hasDiscount) {
+    if (!hasDiscount || price <= 0) {
       return 0;
     }
 
-
-    return (
-      (
-        (price - currentPrice)
-        /
-        price
-      ) *
-      100
-    ).round();
-
+    return (((price - currentPrice) / price) * 100).round();
   }
 
-
-
-  // =========================
-  // YouTube Helper
-  // =========================
-
+  // =========================================================
+  // YOUTUBE HELPER
+  // =========================================================
 
   bool get hasYoutubeVideo =>
-      youtubeVideoUrl != null &&
-      youtubeVideoUrl!.isNotEmpty;
-
-
+      youtubeVideoUrl != null && youtubeVideoUrl!.isNotEmpty;
 }

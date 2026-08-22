@@ -15,4 +15,5 @@ class AppRoutes {
   static const trackingOrders = "/tracking-orders";
   static const tracking = "/tracking/:id";
   static const payment = "/payment";
+  static const flashSale = "/flash-sale";
 }

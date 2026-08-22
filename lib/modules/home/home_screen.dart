@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:tin/controller/language_controller.dart';
 import 'package:tin/data/models/product_model.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/appdrawer/app_drawer.dart';
+import 'package:tin/modules/home/category/products_page.dart';
 import 'package:tin/modules/home/home_controller.dart';
 import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
 import 'package:tin/modules/home/widgets/app_loader.dart';
@@ -29,34 +29,44 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final rewardController = Get.put(RewardController());
-  final locationController = Get.put(LocationController());
-  final homeController = Get.put(HomeController());
+  // AppBinding এ যেহেতু সব Register করা আছে, তাই সহজে Get.find() দিয়ে ধরা হলো
+  final rewardController = Get.find<RewardController>();
+  final locationController = Get.find<LocationController>();
+  final homeController = Get.find<HomeController>();
   final cartController = Get.find<CartController>();
   final auth = Get.find<AuthController>();
   final lang = Get.find<LanguageController>();
   final orderController = Get.find<OrderController>();
-  final trackingController = Get.find<OrderTrackingController>(); 
-  
-  // ড্রয়ার ওপেন/ক্লোজ স্টেট ট্র্যাকিং ভেরিয়েবল
+  final trackingController = Get.find<OrderTrackingController>();
+
   final RxBool _isDrawerOpen = false.obs;
 
   List<ProductModel> get flashProducts => homeController.products
       .where((p) => p.isFlashSale)
       .toList();
-      
+
   @override
   void initState() {
     super.initState();
-    initTracking();
-    loadRewardBalance(); 
-    loadRewardTransactions(); 
+    
+    // ফ্রেম রেন্ডার হওয়ার পর সেফলি ব্যাকগ্রাউন্ড ডাটা ফেচিং ট্রিগার
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      initTracking();
+      loadRewardBalance();
+      loadRewardTransactions();
+    });
+
+    // সাইলেন্ট ব্যাকগ্রাউন্ড রিওয়ার্ড সিঙ্ক
+    ever(auth.isLoggedIn, (isLogged) {
+      if (isLogged) {
+        loadRewardBalance();
+        loadRewardTransactions();
+      }
+    });
   }
 
   Future<void> initTracking() async {
-    if (!auth.isLoggedIn.value) {
-      return;
-    }
+    if (!auth.isLoggedIn.value) return;
 
     await orderController.loadActiveOrders();
 
@@ -67,136 +77,194 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ================= SILENT REWARD FETCHING =================
   Future<void> loadRewardBalance() async {
     if (!auth.isLoggedIn.value) return;
 
-    final userId = auth.user['_id'] ?? '';
-    final token = auth.box.read("token"); 
+    final userId = auth.user['_id'] ?? auth.user['id'] ?? '';
+    final token = auth.box.read("token") ?? '';
 
-    await rewardController.loadBalance(
-      userId,
-      token,
-    );
+    if (userId.toString().isNotEmpty && token.toString().isNotEmpty) {
+      await rewardController.loadBalance(userId.toString(), token.toString());
+    }
   }
 
   Future<void> loadRewardTransactions() async {
     if (!auth.isLoggedIn.value) return;
 
-    final userId = auth.user['_id'] ?? '';
-    final token = auth.box.read("token");
+    final userId = auth.user['_id'] ?? auth.user['id'] ?? '';
+    final token = auth.box.read("token") ?? '';
 
-    await rewardController.loadTransactions(userId, token);
+    if (userId.toString().isNotEmpty && token.toString().isNotEmpty) {
+      await rewardController.loadTransactions(userId.toString(), token.toString());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // উপরের স্ট্যাটাস বারের (ঘড়ি, ব্যাটারি আইকন) উচ্চতা বের করা হলো
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      // ব্যাকগ্রাউন্ড কালার সাদা করা হলো
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      appBar: null,
 
-      // ১. ড্রয়ার দিয়ে অ্যাপবারকে ঢেকে ফেলার জন্য AppBar-কে Scaffold থেকে সরিয়ে বডির Stack-এর ভেতর নিয়ে যাওয়া হলো
-      appBar: null, 
-
+      // সিঙ্গেল Root Obx
       body: Obx(() {
         return Stack(
           children: [
-            /// ================= ২. MAIN CONTENT (APPBAR + SCROLLABLE BODY) =================
+            /// ================= MAIN CONTENT =================
             Column(
               children: [
                 /// --- CUSTOM APPBAR ---
-                AppBar(
-                  elevation: 0,
-                  // অ্যাপবারের ব্যাকগ্রাউন্ড কালার সাদা করা হলো
-                  backgroundColor: Colors.white,
-                  iconTheme: const IconThemeData(color: Colors.black),
-                  title: Obx(
-                    () => Row(
-                      children: [
-                        /// LOCATION
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              Get.bottomSheet(
-                                const LocationBottomSheet(),
-                                backgroundColor: Colors.white,
-                                isScrollControlled: true,
-                              );
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  color: Colors.deepPurple,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    locationController.currentLocation,
-                                    style: const TextStyle(color: Colors.black), // সাদা ব্যাকগ্রাউন্ডের জন্য কালো টেক্সট
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const Icon(Icons.keyboard_arrow_down, color: Colors.black),
-                              ],
-                            ),
-                          ),
+AppBar(
+  elevation: 0,
+  backgroundColor: Colors.white,
+  iconTheme: const IconThemeData(color: Colors.black),
+  title: Row(
+    children: [
+      /// LOCATION (ডাইরেক্ট ডাটাবেজ থেকে ডাটা আসবে)
+      Expanded(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              Get.bottomSheet(
+                const LocationBottomSheet(),
+                backgroundColor: Colors.white,
+                isScrollControlled: true,
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.deepPurple,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+
+                  Flexible(
+                    child: Obx(() {
+                      final languageController = Get.find<LanguageController>();
+                      final locationController = Get.find<LocationController>();
+                      final isBangla = languageController.isBangla;
+
+                      // কোনো ডিফল্ট ফিক্সড স্ট্রিম বা 'লোকেশন নির্বাচন করুন' থাকবে না
+                      // ইউজারের পছন্দ করা ডিস্ট্রিক্ট অথবা ডাটাবেজের প্রথম ডিস্ট্রিক্ট বসবে
+                      String displayLocation = "";
+
+                      if (isBangla) {
+                        if (locationController.selectedDistrictBn.value.isNotEmpty) {
+                          displayLocation = locationController.selectedDistrictBn.value;
+                        } else if (locationController.locations.isNotEmpty) {
+                          displayLocation = locationController.locations.first.district.bn;
+                        }
+                      } else {
+                        if (locationController.selectedDistrictEn.value.isNotEmpty) {
+                          displayLocation = locationController.selectedDistrictEn.value;
+                        } else if (locationController.locations.isNotEmpty) {
+                          displayLocation = locationController.locations.first.district.en;
+                        }
+                      }
+
+                      return Text(
+                        displayLocation,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    }),
+                  ),
+                  const SizedBox(width: 2),
 
-                        /// REWARD BADGE
-                        const SizedBox(width: 10),
-                        Obx(() {
-                          if (!auth.isLoggedIn.value) return const SizedBox();
-                          final reward = rewardController.balance.value;
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.deepPurple,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
 
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () => showRewardTransactions(context),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade600,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.card_giftcard, size: 16, color: Colors.white),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "${reward.toStringAsFixed(0)} ৳",
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
+      /// REWARD BADGE
+      const SizedBox(width: 6),
+      Obx(() {
+        if (!auth.isLoggedIn.value) return const SizedBox.shrink();
+
+        return Material(
+          color: Colors.green.shade600,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => showRewardTransactions(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.card_giftcard_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "${rewardController.balance.value.toStringAsFixed(0)} ৳",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
-                  actions: [
-                    IconButton(
-                      onPressed: () {
-                        _isDrawerOpen.value = !_isDrawerOpen.value;
-                      },
-                      icon: Icon(
-                        _isDrawerOpen.value ? Icons.close : Icons.menu,
-                        color: Colors.black, // সাদা ব্যাকগ্রাউন্ডের জন্য আইকন কালো করা হলো
-                      ),
-                    ),
-                  ],
-                ),
-
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
+    ],
+  ),
+  actions: [
+    Obx(() => IconButton(
+      onPressed: () {
+        _isDrawerOpen.value = !_isDrawerOpen.value;
+      },
+      icon: Icon(
+        _isDrawerOpen.value ? Icons.close_rounded : Icons.menu_rounded,
+        color: Colors.black,
+      ),
+    )),
+  ],
+),
                 /// --- BODY SCROLLABLE CONTENT ---
                 Expanded(
                   child: RefreshIndicator(
+                    color: Colors.transparent,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    strokeWidth: 0,
                     onRefresh: () async {
-                      await homeController.loadHomeData();
-                      await orderController.loadActiveOrders();
+                      // ম্যানুয়ালি লোডার ট্রিগার করা হচ্ছে
+                      homeController.isRefreshing.value = true;
+                      try {
+                        await homeController.refreshHome();
+                        await orderController.loadActiveOrders();
+                        await loadRewardBalance();
+                        await loadRewardTransactions();
+                      } finally {
+                        // রিফ্রেশ শেষ হলে লোডার বন্ধ করা হচ্ছে
+                        homeController.isRefreshing.value = false;
+                      }
                     },
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -207,36 +275,96 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (homeController.banners.isNotEmpty)
                             BannerSlider(banners: homeController.banners),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
                           CategoryGrid(categories: homeController.categories),
-
-                          const SizedBox(height: 20),
+                          
+                          /// 🟢 POPULAR PRODUCTS SECTION
+                          const SizedBox(height: 15),
                           ProductSection(
                             title: lang.currentLanguage.value == "bn" ? "জনপ্রিয় পণ্য" : "Popular Products",
                             products: homeController.products,
+                            onMoreTap: () {
+                              Get.to(() => ProductsPage(
+                                title: lang.currentLanguage.value == "bn" ? "জনপ্রিয় পণ্য" : "Popular Products",
+                                products: homeController.products,
+                              ));
+                            },
                           ),
 
-                          const SizedBox(height: 20),
+                          /// 🟢 FLASH SALE SECTION
+                          const SizedBox(height: 15),
                           if (flashProducts.isNotEmpty) ...[
                             ProductSection(
-                              title: "Flash Sale",
+                              title: lang.currentLanguage.value == "bn" ? "স্বল্প মূল্যে" : "Flash Sale", 
                               products: flashProducts,
+                              onMoreTap: () {
+                                Get.to(() => ProductsPage(
+                                  title: lang.currentLanguage.value == "bn" ? "স্বল্প মূল্যে" : "Flash Sale",
+                                  products: flashProducts,
+                                ));
+                              },
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 15),
                           ],
 
-                          const SizedBox(height: 20),
+                          /// 🟢 FRESH PRODUCT SECTION
+                          const SizedBox(height: 15),
                           ProductSection(
-                            title: "Fresh Product",
+                            title: lang.currentLanguage.value == "bn" ? "তাজা পণ্য" : "Fresh Product",
                             products: homeController.products.where((p) => p.productType == "fresh").toList(),
+                            onMoreTap: () {
+                              final freshProducts = homeController.products.where((p) => p.productType == "fresh").toList();
+                              Get.to(() => ProductsPage(
+                                title: lang.currentLanguage.value == "bn" ? "তাজা পণ্য" : "Fresh Product",
+                                products: freshProducts,
+                              ));
+                            },
                           ),
+                          const SizedBox(height: 15),
+                          ...homeController.categories.map((mainCategory) {
+                            final categoryProducts = homeController.products.where((product) {
+                              final parentCategoryId =
+                                  product.category?["parentCategory"]?.toString() ?? "";
+                              return parentCategoryId == mainCategory.id;
+                            }).toList();
+                            
+                            if (categoryProducts.isEmpty) {
+                              return const SizedBox();
+                            }
 
-                          const SizedBox(height: 20),
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ProductSection(
+                                  title: mainCategory.localizedName,
+                                  products: categoryProducts,
+                                  onMoreTap: () {
+                                    Get.to(
+                                      () => ProductsPage(
+                                        title: mainCategory.localizedName,
+                                        products: categoryProducts,
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 15),
+                              ],
+                            );
+                          }).toList(),
+
+                          /// 🟢 REGULAR PRODUCT SECTION
+                          const SizedBox(height: 15),
                           ProductSection(
-                            title: "Regular Product",
+                            title: lang.currentLanguage.value == "bn" ? "দৈনন্দিন পণ্য " : "Regular Product",
                             products: homeController.products.where((p) => p.productType == "regular").toList(),
+                            onMoreTap: () {
+                              final regularProducts = homeController.products.where((p) => p.productType == "regular").toList();
+                              Get.to(() => ProductsPage(
+                                title: lang.currentLanguage.value == "bn" ? "দৈনন্দিন পণ্য " : "Regular Product",
+                                products: regularProducts,
+                              ));
+                            },
                           ),
-                          const SizedBox(height: 20),
                           const UserHelpSection(),
                         ],
                       ),
@@ -246,83 +374,71 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            /// ================= ৩. LOADER LAYER =================
-            Obx(() {
-              final showLoader = homeController.isLoading.value;
-              if (!showLoader) return const SizedBox();
-
-              return Positioned.fill(
+            /// ================= LOADER LAYER =================
+            if (homeController.isLoading.value || homeController.isRefreshing.value)
+              Positioned.fill(
                 child: IgnorePointer(
                   child: Container(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.1),
                     child: const Center(child: AppLoader()),
                   ),
                 ),
-              );
-            }),
-
-            /// ================= ৪. TRACKING BAR LAYER =================
-Obx(() {
-  if (!auth.isLoggedIn.value) return const SizedBox();
-  if (!orderController.hasActiveOrder.value) return const SizedBox();
-  if (!trackingController.trackingEnabled.value) return const SizedBox();
-
-  return Positioned(
-    left: 15,
-    right: 15,
-    bottom: 20,
-    child: orderController.isTrackingMinimized.value
-        ? Align(
-            alignment: Alignment.bottomRight,
-            child: GestureDetector(
-              onTap: () {
-                orderController.isTrackingMinimized.value = false;
-              },
-              child: Container(
-                width: 55,
-                height: 55,
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.delivery_dining, color: Colors.white),
-              ),
-            ),
-          )
-        : Stack(
-            clipBehavior: Clip.none, // ক্রস আইকন যেন বাইরে সুন্দর দেখায়
-            children: [
-              // প্রোগ্রেস লাইনের ডানপাশে প্যাডিং দেওয়া হয়েছে যেন ক্রসের নিচে না পড়ে
-              const Padding(
-                padding: EdgeInsets.only(top: 12, right: 15),
-                child: RiderProgressLine(),
               ),
 
-              /// ================= CLOSE BUTTON =================
+            /// ================= TRACKING BAR LAYER =================
+            if (auth.isLoggedIn.value && orderController.hasActiveOrder.value && trackingController.trackingEnabled.value)
               Positioned(
-                top: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: () {
-                    orderController.isTrackingMinimized.value = true;
-                  },
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
-                  ),
-                ),
+                left: 15,
+                right: 15,
+                bottom: 20,
+                child: orderController.isTrackingMinimized.value
+                    ? Align(
+                        alignment: Alignment.bottomRight,
+                        child: GestureDetector(
+                          onTap: () {
+                            orderController.isTrackingMinimized.value = false;
+                          },
+                          child: Container(
+                            width: 55,
+                            height: 55,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.delivery_dining, color: Colors.white),
+                          ),
+                        ),
+                      )
+                    : Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12, right: 15),
+                            child: RiderProgressLine(),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () {
+                                orderController.isTrackingMinimized.value = true;
+                              },
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.4),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
-            ],
-          ),
-  );
-}),
 
-            /// ================= ৫. CUSTOM DRAWERS WITH EXACT BOUNDS =================
+            /// ================= CUSTOM DRAWERS =================
             if (_isDrawerOpen.value)
               Positioned(
                 top: statusBarHeight,
@@ -338,7 +454,7 @@ Obx(() {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
-              top: statusBarHeight, 
+              top: statusBarHeight,
               bottom: 0,
               right: _isDrawerOpen.value ? 0 : -MediaQuery.of(context).size.width * 0.75,
               width: MediaQuery.of(context).size.width * 0.75,
@@ -351,69 +467,185 @@ Obx(() {
         );
       }),
 
-      // ৬. বটম নেভিগেশন বারটি Scaffold-এর নিজস্ব জায়গায় থাকায় ড্রয়ার কোনোভাবেই এর ওপরে ওভারল্যাপ করবে না
       bottomNavigationBar: AppBottomNavBar(
         cartController: cartController,
       ),
     );
   }
 
-  /// ================= REWARD TRANSACTIONS SHEET =================
+  /// ================= REWARD TRANSACTIONS BOTTOM SHEET =================
   void showRewardTransactions(BuildContext context) {
+    loadRewardTransactions();
+    final bool isBn = lang.currentLanguage.value == "bn";
+
     Get.bottomSheet(
       Container(
-        height: MediaQuery.of(context).size.height * .65,
+        height: MediaQuery.of(context).size.height * 0.70,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          color: Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 45,
-              height: 5,
-              decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(10)),
-            ),
-            const SizedBox(height: 15),
-            const Text(
-              "Reward Transactions",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            Expanded(
-              child: Obx(() {
-                if (rewardController.txLoading.value) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-                if (rewardController.transactions.isEmpty) {
-                  return const Center(child: Text("No transactions found"));
-                }
-
-                return ListView.builder(
-                  itemCount: rewardController.transactions.length,
-                  itemBuilder: (_, index) {
-                    final tx = rewardController.transactions[index];
-                    final earn = tx["type"] == "EARN";
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: earn ? Colors.green : Colors.red,
-                        child: Icon(earn ? Icons.add : Icons.remove, color: Colors.white),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isBn ? "রিওয়ার্ড লেনদেন" : "Reward Transactions",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
                       ),
-                      title: Text("৳${tx["amount"]}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(tx["description"] ?? ""),
-                      trailing: Text(
-                        tx["type"],
-                        style: TextStyle(color: earn ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.card_giftcard, size: 14, color: Colors.green.shade700),
+                          const SizedBox(width: 4),
+                          Obx(() => Text(
+                            "৳${rewardController.balance.value.toStringAsFixed(0)}",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                            ),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+              Expanded(
+                child: Obx(() {
+                  if (rewardController.txLoading.value && rewardController.transactions.isEmpty) {
+                    return const Center(child: CircularProgressIndicator(color: Colors.green));
+                  }
+
+                  if (rewardController.transactions.isEmpty) {
+                    return Center(
+                      child: Text(
+                        isBn ? "কোনো লেনদেনের ইতিহাস পাওয়া যায়নি" : "No transactions found",
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
                       ),
                     );
-                  },
-                );
-              }),
-            ),
-          ],
+                  }
+
+                  return ListView.builder(
+                    itemCount: rewardController.transactions.length,
+                    padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 24),
+                    physics: const BouncingScrollPhysics(),
+                    itemBuilder: (_, index) {
+                      final tx = rewardController.transactions[index];
+
+                      final String rawType = (tx["type"] ?? tx["transactionType"] ?? "EARN").toString().toUpperCase();
+                      final bool earn = rawType == "EARN" || rawType == "CREDIT";
+
+                      final num rawAmount = tx["amount"] ?? tx["points"] ?? 0;
+                      final String formattedAmount = rawAmount.toDouble().toStringAsFixed(2);
+
+                      final String description = tx["description"] ?? tx["title"] ?? tx["note"] ?? "";
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                          border: Border.all(color: Colors.grey.shade200, width: 0.8),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: earn ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                              child: Icon(
+                                earn ? Icons.add : Icons.remove,
+                                color: earn ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "৳$formattedAmount",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    description,
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: earn ? Colors.green.shade50 : Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                earn
+                                    ? (isBn ? "অর্জিত" : "EARN")
+                                    : (isBn ? "ব্যবহৃত" : "REDEEM"),
+                                style: TextStyle(
+                                  color: earn ? Colors.green.shade700 : Colors.red.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
       isScrollControlled: true,

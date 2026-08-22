@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/category/category_controller.dart';
+import 'package:tin/modules/home/category/sub_category.dart';
 import 'package:tin/modules/home/widgets/app_bottom_nav_bar.dart';
-import 'package:tin/modules/home/widgets/app_loader.dart';
 
 class AllCategoriesPage extends StatefulWidget {
   const AllCategoriesPage({super.key});
@@ -14,25 +15,27 @@ class AllCategoriesPage extends StatefulWidget {
 }
 
 class _AllCategoriesPageState extends State<AllCategoriesPage> {
-  final controller = Get.put(CategoryController());
+  final CategoryController controller = Get.isRegistered<CategoryController>()
+      ? Get.find<CategoryController>()
+      : Get.put(CategoryController());
+
   final CartController cartController = Get.find<CartController>();
 
   @override
   void initState() {
     super.initState();
-    controller.loadMainCategories(); // শুধু main categories
+    controller.fetchAllCategoriesAndSubCategories();
   }
 
   @override
   Widget build(BuildContext context) {
-    // হোম পেজের মতো ৬টি সুন্দর হালকা কালার প্যালেট (লুপ হবে)
     final List<Color> bgColors = [
-      const Color(0xFFE8F5E9), // হালকা সবুজ
-      const Color(0xFFE3F2FD), // হালকা নীল
-      const Color(0xFFFFF3E0), // হালকা কমলা
-      const Color(0xFFF3E5F5), // হালকা বেগুনি
-      const Color(0xFFE0F2F1), // হালকা টিল
-      const Color(0xFFFCE4EC), // হালকা গোলাপি
+      const Color(0xFFE8F5E9),
+      const Color(0xFFE3F2FD),
+      const Color(0xFFFFF3E0),
+      const Color(0xFFF3E5F5),
+      const Color(0xFFE0F2F1),
+      const Color(0xFFFCE4EC),
     ];
 
     return Scaffold(
@@ -50,17 +53,11 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
         ),
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: AppLoader(),
-          );
-        }
-
         if (controller.categories.isEmpty) {
           return const Center(
             child: Text(
               "No Categories Found",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
           );
         }
@@ -68,11 +65,12 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
         return GridView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           itemCount: controller.categories.length,
+          physics: const BouncingScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.5, // অন্য পেজগুলোর সাথে সামঞ্জস্যপূর্ণ রেসপনসিভ রেশিও
+            childAspectRatio: 1.5,
           ),
           itemBuilder: (context, index) {
             final category = controller.categories[index];
@@ -80,8 +78,9 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
 
             return GestureDetector(
               onTap: () {
-                Get.toNamed(
-                  AppRoutes.subCategory,
+                // মেইন ক্যাটাগরিতে ক্লিক করলে SubCategoryPage-এ যাবে এবং ডাটা পাস করবে
+                Get.to(
+                  () => const SubCategoryPage(),
                   arguments: category,
                 );
               },
@@ -94,7 +93,6 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
                   builder: (context, constraints) {
                     return Stack(
                       children: [
-                        // 🟢 ১. নাম সেকশন (বামের অর্ধেক জায়গা জুড়ে ৪৬% উইডথ)
                         Positioned(
                           left: 10,
                           top: 0,
@@ -103,7 +101,7 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              category.name,
+                              category.localizedName,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -115,21 +113,25 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
                             ),
                           ),
                         ),
-
-                        // 🟢 ২. ইমেজ সেকশন (ডানের অর্ধেক জায়গা জুড়ে - BoxFit.contain)
                         Positioned(
-                          right: 4, // হালকা সেফ প্যাডিং যেন কোণায় লেগে না যায়
+                          right: 4,
                           top: 4,
                           bottom: 4,
-                          width: constraints.maxWidth * 0.48, // ডানের পুরো অর্ধেক স্পেস
+                          width: constraints.maxWidth * 0.48,
                           child: Container(
-                            alignment: Alignment.centerRight, // ডান পাশে এলাইন করে রাখবে
+                            alignment: Alignment.centerRight,
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                category.image,
-                                fit: BoxFit.contain, // 🟢 এর ফলে ইমেজের কোনো অংশ কাটবে না, পুরোপুরি আসবে
-                                errorBuilder: (_, __, ___) => Container(
+                              child: CachedNetworkImage(
+                                imageUrl: category.image,
+                                fit: BoxFit.contain,
+                                memCacheWidth: 200,
+                                memCacheHeight: 200,
+                                fadeInDuration: const Duration(milliseconds: 300),
+                                placeholder: (context, url) => Container(
+                                  color: Colors.transparent,
+                                ),
+                                errorWidget: (context, url, error) => Container(
                                   color: Colors.grey.shade200,
                                   child: const Icon(
                                     Icons.image_not_supported,

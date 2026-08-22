@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tin/modules/address/address_page.dart';
+import 'package:tin/controller/language_controller.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/auth/login_page.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
@@ -15,9 +15,17 @@ class CartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final locationController = Get.find<LocationController>();
     final cartController = Get.find<CartController>();
-    
+    final authController = Get.find<AuthController>();
+
+    // ভাষা কন্ট্রোলার
+    final lang = Get.isRegistered<LanguageController>()
+        ? Get.find<LanguageController>()
+        : Get.put(LanguageController());
+
+    final Color primaryThemeColor = const Color(0xFF1D4D33); // ব্র্যান্ড থিম কালার
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (Get.find<AuthController>().isLoggedIn.value) {
+      if (authController.isLoggedIn.value) {
         cartController.loadServerCart();
       }
     });
@@ -29,52 +37,42 @@ class CartPage extends StatelessWidget {
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 26),
+          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
           onPressed: () => Get.back(),
         ),
-        title: const Text(
-          "Shopping Bag",
-          style: TextStyle(
+        title: Text(
+          lang.isBangla ? "শপিং ব্যাগ" : "Shopping Bag",
+          style: const TextStyle(
             color: Colors.black,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey.shade200,
-            height: 1,
-          ),
+          child: Container(color: Colors.grey.shade200, height: 1),
         ),
       ),
       body: Obx(() {
+        final isEmpty = cartController.cartItems.isEmpty;
+        final isLoading = cartController.isLoading.value;
+
         return Stack(
           children: [
-            // =====================
-            // EMPTY CART
-            // =====================
-            if (cartController.cartItems.isEmpty && !cartController.isLoading.value)
-              const Center(
-                child: Text(
-                  "Your cart is empty",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+            // ১. খালি কার্ট ভিউ
+            if (isEmpty && !isLoading)
+              _EmptyCartView(isBangla: lang.isBangla),
 
-            // =====================
-            // CART CONTENT (HIGH PERFORMANCE UI)
-            // =====================
-            if (cartController.cartItems.isNotEmpty)
+            // ২. কার্ট কন্টেন্ট
+            if (!isEmpty)
               Column(
                 children: [
-                  // CART ITEMS LIST
                   Expanded(
                     child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       itemCount: cartController.cartItems.length,
                       separatorBuilder: (context, index) => Divider(
                         color: Colors.grey.shade200,
@@ -83,298 +81,379 @@ class CartPage extends StatelessWidget {
                       ),
                       itemBuilder: (context, index) {
                         final item = cartController.cartItems[index];
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Product Image
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: Image.network(
-                                item.image,
-                                width: 55,
-                                height: 55,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Product Details
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.localizedTitle,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      // Active Offer Price
-                                      Text(
-                                        "৳${item.price}",
-                                        style: const TextStyle(
-                                          color: Color(0xffE55C5C),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      
-                                      Text(
-                                        "৳${(item.price * 1.2).toStringAsFixed(0)}", 
-                                        style: TextStyle(
-                                          color: Colors.grey.shade400,
-                                          fontSize: 12,
-                                          decoration: TextDecoration.lineThrough,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      
-                                      Text(
-                                        "| 1 kg", 
-                                        style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // INSTANT RESPONSE QUANTITY CONTROLLER
-                            Row(
-                              children: [
-                                // Minus Button (Instant Update)
-                                GestureDetector(
-                                  onTap: () {
-                                    final auth = Get.find<AuthController>();
-                                    if (auth.isLoggedIn.value) {
-                                      if (item.quantity > 1) {
-                                        // ১. সাথে সাথে লোকাল স্টেট কমিয়ে দিচ্ছি (No Lag!)
-                                        item.quantity--;
-                                        cartController.cartItems.refresh();
-                                        // ২. ব্যাকগ্রাউন্ডে ডাটাবেজে হিট করবে
-                                        cartController.decreaseServerQty(
-                                          item.cartId!,
-                                          item.quantity + 1, // আগের কোয়ান্টিটি পাস করে সেভ হ্যান্ডেল করার জন্য
-                                        );
-                                      } else {
-                                        // ১ পিস থাকলে ডিলিট মেথড কল হবে
-                                        cartController.cartService.removeItem(item.cartId!);
-                                        cartController.cartItems.removeAt(index);
-                                      }
-                                    } else {
-                                      cartController.decrement(item.id);
-                                    }
-                                  },
-                                  child: const Icon(
-                                    Icons.remove,
-                                    size: 22,
-                                    color: Color(0xff9E65FA),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                
-                                // Quantity Indicator Box
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.shade300),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  constraints: const BoxConstraints(minWidth: 32),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    item.quantity.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Plus Button (Instant Update)
-                                GestureDetector(
-                                  onTap: () {
-                                    final auth = Get.find<AuthController>();
-                                    if (auth.isLoggedIn.value) {
-                                      // ১. সাথে সাথে লোকাল স্টেট বাড়িয়ে দিচ্ছি (Instant UI feedback)
-                                      item.quantity++;
-                                      cartController.cartItems.refresh();
-                                      // ২. ব্যাকগ্রাউন্ডে ডাটাবেজ আপডেট হবে
-                                      cartController.increaseServerQty(
-                                        item.cartId!,
-                                        item.quantity - 1, // আগের কোয়ান্টিটি রেফারেন্স হিসেবে পাস করা
-                                      );
-                                    } else {
-                                      cartController.increment(item.id);
-                                    }
-                                  },
-                                  child: const Icon(
-                                    Icons.add,
-                                    size: 22,
-                                    color: Color(0xff9E65FA),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        return _CartItemTile(
+                          item: item,
+                          index: index,
+                          cartController: cartController,
+                          authController: authController,
+                          themeColor: primaryThemeColor, 
+                          lang: lang,
                         );
                       },
                     ),
                   ),
 
-                  // Green Info Banner
-                  Container(
-                    width: double.infinity,
-                    color: const Color(0xffF0F9F4),
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Color(0xff1AA360),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Delivery fee: ৳${locationController.deliveryCharge.value}",
-                            style: const TextStyle(
-                              color: Color(0xff1AA360),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  // ডেলিভারি ফি ব্যানার
+                  _DeliveryFeeBanner(
+                    deliveryCharge: locationController.deliveryCharge.value,
+                    isBangla: lang.isBangla,
                   ),
 
-                  // Bottom Action Button Container (Instant Total Calculation)
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: const Color(0xff9E65FA), 
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 12),
-                            // Item count
-                            Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.8), width: 1.5),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                cartController.totalItems.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            
-                            // Middle Text Area
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  final auth = Get.find<AuthController>();
-                                  if (auth.isLoggedIn.value) {
-                                    Get.to(() => const OrderSummaryPage());
-                                  } else {
-                                    Get.to(() => LoginPage());
-                                  }
-                                },
-                                child: const Text(
-                                  "Review Address",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            
-                            // Grand Total Button (Automatically updates instantly on UI change)
-                            Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: InkWell(
-                                onTap: () {
-                                  final auth = Get.find<AuthController>();
-                                  if (auth.isLoggedIn.value) {
-                                    Get.to(() => const OrderSummaryPage());
-                                  } else {
-                                    Get.to(() => LoginPage());
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xff7D4FD4), 
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    "৳${cartController.grandTotal.toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  // বটম চেকআউট বার
+                  _BottomCheckoutBar(
+                    cartController: cartController,
+                    authController: authController,
+                    themeColor: primaryThemeColor,
+                    isBangla: lang.isBangla,
                   ),
                 ],
               ),
 
-            // =====================
-            // NO BLOCKING LOADER FOR QUANTITY UPDATE
-            // =====================
-            // শুধুমাত্র ফার্স্ট টাইম ফুল স্ক্রিন লোড হলে বা ডিলিট হলে লোডার দেখাবো, বাটন ক্লিকে নয়।
-            if (cartController.isLoading.value && cartController.cartItems.isEmpty)
+            // ৩. প্রথমবার লোডিং স্টেট
+            if (isLoading && isEmpty)
               Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    color: Colors.white.withOpacity(.45),
-                    child: const Center(
-                      child: AppLoader(),
-                    ),
-                  ),
+                child: Container(
+                  color: Colors.white.withOpacity(0.5),
+                  child: const Center(child: AppLoader()),
                 ),
               ),
           ],
         );
       }),
+    );
+  }
+}
+
+// ==========================================
+// PRIVATE SUB-WIDGETS (ফর বেটার পারফর্মেন্স)
+// ==========================================
+
+class _EmptyCartView extends StatelessWidget {
+  final bool isBangla;
+  const _EmptyCartView({required this.isBangla});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(
+            isBangla ? "আপনার কার্ট খালি" : "Your cart is empty",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CartItemTile extends StatelessWidget {
+  final dynamic item;
+  final int index;
+  final CartController cartController;
+  final AuthController authController;
+  final Color themeColor;
+  final LanguageController lang;
+
+  const _CartItemTile({
+    required this.item,
+    required this.index,
+    required this.cartController,
+    required this.authController,
+    required this.themeColor,
+    required this.lang,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // প্রোডাক্ট ইমেজ
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.network(
+            item.image,
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.image_not_supported,
+              size: 40,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // প্রোডাক্ট বিবরণ
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.localizedTitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    "৳${item.price}",
+                    style: const TextStyle(
+                      color: Color(0xffE55C5C),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    "৳${(item.price * 1.2).toStringAsFixed(0)}",
+                    style: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 12,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  
+                  // ডায়নামিক ইউনিট সেফ রেন্ডারিং
+                    // অ্যাপ ড্রয়ারের মতো ডাইনামিক ইউনিট দেখানোর জন্য
+                    Builder(
+                      builder: (context) {
+                        final unitText = item.localizedUnit; // সরাসরি মডেলের গেটার কল করা হলো
+
+                        if (unitText.isEmpty) return const SizedBox();
+
+                        return Text(
+                          "| $unitText",
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 12,
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // কোয়ান্টিটি কন্ট্রোলার
+// কোয়ান্টিটি কন্ট্রোলার
+Row(
+  children: [
+    _QuantityBtn(
+      icon: Icons.remove,
+      color: themeColor,
+      onTap: () {
+        // সব ক্ষেত্রেই Controller-এর মেথড ব্যবহার করুন
+        cartController.decrement(item.id);
+      },
+    ),
+    Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      constraints: const BoxConstraints(minWidth: 32),
+      alignment: Alignment.center,
+      // Quantity টেক্সটকে Obx দিয়ে মুড়ে দিন (নিরাপদ)
+      child: Obx(() {
+        final currentItem = cartController.getItem(item.id);
+        return Text(
+          (currentItem?.quantity ?? item.quantity).toString(),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        );
+      }),
+    ),
+    _QuantityBtn(
+      icon: Icons.add,
+      color: themeColor,
+      onTap: () {
+        cartController.increment(item.id);
+      },
+    ),
+  ],
+),
+      ],
+    );
+  }
+}
+
+class _QuantityBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuantityBtn({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Icon(icon, size: 20, color: color),
+      ),
+    );
+  }
+}
+
+class _DeliveryFeeBanner extends StatelessWidget {
+  final dynamic deliveryCharge;
+  final bool isBangla;
+
+  const _DeliveryFeeBanner({
+    required this.deliveryCharge,
+    required this.isBangla,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xffF0F9F4),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Color(0xff1AA360), size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isBangla ? "ডেলিভারি চার্জ: ৳$deliveryCharge" : "Delivery fee: ৳$deliveryCharge",
+              style: const TextStyle(
+                color: Color(0xff1AA360),
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomCheckoutBar extends StatelessWidget {
+  final CartController cartController;
+  final AuthController authController;
+  final Color themeColor;
+  final bool isBangla;
+
+  const _BottomCheckoutBar({
+    required this.cartController,
+    required this.authController,
+    required this.themeColor,
+    required this.isBangla,
+  });
+
+  void _navigateToNext() {
+    if (authController.isLoggedIn.value) {
+      Get.to(() => const OrderSummaryPage());
+    } else {
+      Get.to(() => LoginPage());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: InkWell(
+          onTap: _navigateToNext,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: themeColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: themeColor.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // মোট আইটেম সংকেত
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    cartController.totalItems.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // টেক্সট
+                Expanded(
+                  child: Text(
+                    isBangla ? "ঠিকানা রিভিউ করুন" : "Review Address",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                // গ্র্যান্ড টোটাল
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    "৳${cartController.grandTotal.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

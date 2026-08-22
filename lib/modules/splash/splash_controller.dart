@@ -18,7 +18,7 @@ class SplashController extends GetxController {
   }
 
   Future<void> _minimumDelay() async {
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   Future<void> _loadAppData() async {

@@ -6,7 +6,7 @@ class CartItemModel {
   final String id;
   final String? cartId;
 
-  /// 🔥 MULTI LANGUAGE SUPPORT (IMPORTANT FIX)
+  /// 🔥 MULTI LANGUAGE SUPPORT
   final String titleBn;
   final String titleEn;
 
@@ -14,6 +14,9 @@ class CartItemModel {
 
   final num price;
   final num originalPrice;
+
+  /// 🟢 UNIT SUPPORT (NEW)
+  final dynamic unit; 
 
   int quantity;
   bool isEditing;
@@ -29,6 +32,7 @@ class CartItemModel {
     required this.image,
     required this.price,
     required this.originalPrice,
+    this.unit, // এখানে যুক্ত করা হয়েছে
     this.quantity = 1,
     this.isEditing = true,
     this.timer,
@@ -36,10 +40,21 @@ class CartItemModel {
     this.isActive = true,
   });
 
-  /// 🟢 GET LOCALIZED TITLE (BEST PRACTICE)
+  /// 🟢 GET LOCALIZED TITLE
   String get localizedTitle {
     final lang = Get.find<LanguageController>();
     return lang.isBangla ? titleBn : titleEn;
+  }
+
+  /// 🟢 GET LOCALIZED UNIT (NEW)
+  String get localizedUnit {
+    final lang = Get.find<LanguageController>();
+    final isBn = lang.isBangla;
+
+    if (unit is Map) {
+      return isBn ? (unit["bn"] ?? unit["en"] ?? "") : (unit["en"] ?? "");
+    }
+    return unit?.toString() ?? "";
   }
 
   /// ================= SERVER CART JSON =================
@@ -67,7 +82,6 @@ class CartItemModel {
     // ============================================
 
     String imageUrl = "";
-
     if (product["images"] is List &&
         product["images"].isNotEmpty) {
       imageUrl = product["images"][0].toString();
@@ -77,7 +91,6 @@ class CartItemModel {
       cartId: json["_id"]?.toString(),
       id: product["_id"]?.toString() ?? "",
 
-      /// 🔥 FIXED: KEEP BOTH LANGUAGES
       titleBn: titleMap["bn"] ?? "",
       titleEn: titleMap["en"] ?? "",
 
@@ -85,6 +98,9 @@ class CartItemModel {
 
       price: finalPrice,
       originalPrice: basePrice,
+      
+      // 🟢 সার্ভার থেকে ইউনিট রিসিভ করা (product বা সরাসরি json থেকে)
+      unit: product["unit"] ?? json["unit"], 
 
       quantity: json["quantity"] ?? 1,
       isEditing: false,
@@ -97,13 +113,13 @@ class CartItemModel {
       id: json["id"] ?? "",
       cartId: json["cartId"],
 
-      /// 🔥 FIXED
       titleBn: json["titleBn"] ?? "",
       titleEn: json["titleEn"] ?? "",
 
       image: json["image"] ?? "",
       price: json["price"] ?? 0,
       originalPrice: json["originalPrice"] ?? 0,
+      unit: json["unit"], // লোকাল স্টোরেজ থেকে ইউনিট
       quantity: json["quantity"] ?? 1,
       isEditing: false,
       isActive: json["product"]?["isActive"] ?? true,
@@ -116,13 +132,13 @@ class CartItemModel {
       "id": id,
       "cartId": cartId,
 
-      /// 🔥 FIXED
       "titleBn": titleBn,
       "titleEn": titleEn,
 
       "image": image,
       "price": price,
       "originalPrice": originalPrice,
+      "unit": unit, // লোকাল স্টোরেজে ইউনিট সেভ করা
       "quantity": quantity,
     };
   }
@@ -136,6 +152,7 @@ class CartItemModel {
     String? image,
     num? price,
     num? originalPrice,
+    dynamic unit,
     int? quantity,
     bool? isEditing,
     Timer? timer,
@@ -148,6 +165,7 @@ class CartItemModel {
       image: image ?? this.image,
       price: price ?? this.price,
       originalPrice: originalPrice ?? this.originalPrice,
+      unit: unit ?? this.unit,
       quantity: quantity ?? this.quantity,
       isEditing: isEditing ?? this.isEditing,
       timer: timer ?? this.timer,

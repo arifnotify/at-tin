@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart'; // 👈 আপনার LanguageController ইমপোর্ট নিশ্চিত করুন
 import 'package:tin/core/routes/app_routes.dart';
 import 'package:tin/data/models/category_model.dart';
 
@@ -15,6 +16,9 @@ class CategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // LanguageController ইনস্ট্যান্স নেওয়া
+    final LanguageController langController = Get.find<LanguageController>();
+
     // ৬টি ভিন্ন কালার প্যালেট
     final List<Color> bgColors = [
       const Color(0xFFE8F5E9), // হালকা সবুজ (Grocery)
@@ -60,7 +64,7 @@ class CategoryGrid extends StatelessWidget {
                   builder: (context, constraints) {
                     return Stack(
                       children: [
-                        // 🟢 ১. নাম সেকশন (বামের অর্ধেক জায়গা জুড়ে ৪৬% উইডথ)
+                        // 🟢 ১. নাম সেকশন (বাংলা/ইংরেজি ভাষা পরিবর্তনের জন্য localizedName)
                         Positioned(
                           left: 10,
                           top: 0,
@@ -69,7 +73,7 @@ class CategoryGrid extends StatelessWidget {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              category.name,
+                              category.localizedName,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -82,19 +86,19 @@ class CategoryGrid extends StatelessWidget {
                           ),
                         ),
                         
-                        // 🟢 ২. ইমেজ সেকশন (ডানের অর্ধেক জায়গা জুড়ে - ইমেজের কোনো অংশ কাটবে না)
+                        // 🟢 ২. ইমেজ সেকশন
                         Positioned(
-                          right: 4, // হালকা সেফ প্যাডিং যেন কোণায় লেগে না যায়
+                          right: 4,
                           top: 4,
                           bottom: 4,
-                          width: constraints.maxWidth * 0.48, // ডানের পুরো অর্ধেক স্পেস
+                          width: constraints.maxWidth * 0.48,
                           child: Container(
-                            alignment: Alignment.centerRight, // ডান পাশে এলাইন করে রাখবে
+                            alignment: Alignment.centerRight,
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
                                 category.image,
-                                fit: BoxFit.contain, // 🟢 BoxFit.contain এর ফলে ইমেজটি নিখুঁতভাবে পুরোপুরি আসবে
+                                fit: BoxFit.contain,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: Colors.grey.shade200,
                                   child: const Icon(
@@ -118,20 +122,21 @@ class CategoryGrid extends StatelessWidget {
         
         const SizedBox(height: 16),
         
+        // 🟢 ৩. All Categories বাটন (Obx দিয়ে র‍্যাপ করা হয়েছে যাতে ভাষা পরিবর্তন করলে এটিও সাথে সাথে বদলায়)
         Center(
-          child: TextButton(
-            onPressed: onAllCategoriesPressed ?? () => Get.toNamed(AppRoutes.allCategories),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.deepPurple,
-            ),
-            child: const Text(
-              "All Categories",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          child: Obx(() => TextButton(
+                onPressed: onAllCategoriesPressed ?? () => Get.toNamed(AppRoutes.allCategories),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.deepPurple,
+                ),
+                child: Text(
+                  langController.isBangla ? "সব ক্যাটাগরি" : "All Categories",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )),
         ),
       ],
     );

@@ -29,6 +29,21 @@ class HomeService {
     return response.data;
   }
 
+  // =========================
+// HOME CATEGORIES
+// ONLY showOnHome = true
+// =========================
+
+Future<dynamic> getHomeCategories() async {
+
+  final response =
+      await DioClient.dio.get(
+    "/categories/home",
+  );
+
+  return response.data;
+}
+
 
   // =========================
   // ALL CATEGORIES

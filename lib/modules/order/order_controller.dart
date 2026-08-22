@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tin/core/routes/app_routes.dart';
+import 'package:tin/core/socket/socket_service.dart';
 import 'package:tin/data/services/order_service.dart';
 import 'package:tin/modules/auth/auth_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
@@ -36,12 +37,31 @@ class OrderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
-    // অ্যাপ ওপেন হওয়ার সময় যদি AuthController ইতিমধ্যেই লগইন স্টেট কনফার্ম করে ফেলে, তবে ডাটা লোড হবে।
+
+    SocketService().connect();
+
+    SocketService().listenOrderStatusChanged((data) async {
+      print("🔥 ORDER STATUS CHANGED");
+      await loadActiveOrders();
+    });
+
+    SocketService().listenOrderUpdated((data) async {
+      print("🔥 ORDER UPDATED");
+      await loadActiveOrders();
+    });
+
     if (Get.find<AuthController>().isLoggedIn.value) {
       loadActiveOrders();
       loadRewardWallet();
     }
+  }
+
+  @override
+  void onClose() {
+    // 🛡️ মেমরি লিক রোধে কন্ট্রোলার অফ হলে সকেট ডিসকানেক্ট বা অফ করা
+    SocketService().offOrderStatusChanged();
+    SocketService().offOrderUpdated();
+    super.onClose();
   }
 
   // =========================================================
@@ -69,17 +89,13 @@ class OrderController extends GetxController {
         paymentMethod: paymentMethod,
       );
 
-      // ==========================================
       // 1. SSLCOMMERZ FLOW
-      // ==========================================
       if (response["paymentMethod"] == "SSLCOMMERZ" && response["paymentUrl"] != null) {
-
         final result = await Get.dialog<bool>(
           PaymentDialog(paymentUrl: response["paymentUrl"]),
           barrierDismissible: false,
         );
 
-        // ❌ পেমেন্ট ক্যানসেল বা ফেইল হলে
         if (result != true) {
           Get.snackbar(
             "Payment Incomplete",
@@ -89,26 +105,23 @@ class OrderController extends GetxController {
             colorText: Colors.white,
             margin: const EdgeInsets.all(12),
           );
-          return false; // ইউজার Order Summary পেজেই থাকবে
+          return false;
         }
-        
-        // ✅ পেমেন্ট সফল হলে সাকসেস হ্যান্ডলার ফায়ার হবে
+
         await _handleSuccessResponse();
         return true;
       } 
-      
-      // ==========================================
       // 2. COD FLOW
-      // ==========================================
       else {
         await _handleSuccessResponse();
         return true;
       }
-
     } catch (e) {
+      print("Order error details: $e");
+      
       Get.snackbar(
-        "Order Error",
-        e.toString(),
+        "Order Failed",
+        "ইন্টারনেট সংযোগ নেই বা সমস্যা দেখা দিয়েছে। আবার চেষ্টা করুন।",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade800,
         colorText: Colors.white,
@@ -121,22 +134,25 @@ class OrderController extends GetxController {
   }
 
   // ==========================================
-  // HANDLE SUCCESS RESPONSE & NAVIGATION (FIXED)
+  // HANDLE SUCCESS RESPONSE & NAVIGATION
   // ==========================================
-Future<void> _handleSuccessResponse() async {
+  Future<void> _handleSuccessResponse() async {
     await Future.delayed(const Duration(milliseconds: 100));
 
-    // 🎯 নেমড রুটে অতিরিক্ত পারামিটার বাদ দিয়ে
     Get.offAllNamed(AppRoutes.ordersuccess);
 
     Future.microtask(() async {
-      final cart = Get.find<CartController>();
-      await cart.clearCart();
-      await loadActiveOrders();
-      await loadRewardWallet();
+      try {
+        final cart = Get.find<CartController>();
+        await cart.clearCart();
+        await loadActiveOrders();
+        await loadRewardWallet();
 
-      useReward.value = false;
-      rewardAmount.value = 0.0;
+        useReward.value = false;
+        rewardAmount.value = 0.0;
+      } catch (e) {
+        print("Error in success handler: $e");
+      }
     });
   }
 
@@ -171,7 +187,8 @@ Future<void> _handleSuccessResponse() async {
         return status != "Delivered" && status != "Cancelled";
       }).toList();
 
-      activeOrders.value = active;
+      // 🔄 RxList-এর মান সঠিকভাবে আপডেট করতে assignAll ব্যবহার
+      activeOrders.assignAll(active);
 
       if (active.isEmpty) {
         clearTracking();
@@ -182,13 +199,7 @@ Future<void> _handleSuccessResponse() async {
 
       hasActiveOrder.value = true;
 
-      if (selectedOrderId.value.isEmpty) {
-        selectedOrderId.value = active.first["_id"];
-      }
-
-      final exists = active.any((e) => e["_id"] == selectedOrderId.value);
-
-      if (!exists) {
+      if (selectedOrderId.value.isEmpty || !active.any((e) => e["_id"] == selectedOrderId.value)) {
         selectedOrderId.value = active.first["_id"];
       }
 
@@ -199,7 +210,9 @@ Future<void> _handleSuccessResponse() async {
       activeOrderStatus = selected["orderStatus"];
 
       if (trackingEnabled.value) {
-        Get.find<OrderTrackingController>().startTracking(selectedOrderId.value);
+        if (Get.isRegistered<OrderTrackingController>()) {
+          Get.find<OrderTrackingController>().startTracking(selectedOrderId.value);
+        }
       }
     } catch (e) {
       clearTracking();
@@ -220,9 +233,11 @@ Future<void> _handleSuccessResponse() async {
       trackingEnabled.value = selected["trackingEnabled"] ?? false;
       activeOrderStatus = selected["orderStatus"];
 
-      final tracking = Get.find<OrderTrackingController>();
-      tracking.stopTracking();
-      tracking.startTracking(orderId);
+      if (Get.isRegistered<OrderTrackingController>()) {
+        final tracking = Get.find<OrderTrackingController>();
+        tracking.stopTracking();
+        tracking.startTracking(orderId);
+      }
     }
   }
 
@@ -266,35 +281,5 @@ Future<void> _handleSuccessResponse() async {
       AppRoutes.tracking,
       arguments: selectedOrderId.value,
     );
-  }
-
-  // =========================
-  // CHECK ACTIVE ORDER
-  // =========================
-  Future<void> checkActiveOrder() async {
-    try {
-      if (!Get.find<AuthController>().isLoggedIn.value) return;
-
-      final orders = await service.getMyOrders();
-
-      final activeOrdersList = orders.where((o) {
-        final status = o["orderStatus"];
-        return status == "OutForDelivery";
-      }).toList();
-
-      if (activeOrdersList.isEmpty) {
-        selectedOrderId.value = "";
-        hasActiveOrder.value = false;
-        return;
-      }
-
-      hasActiveOrder.value = true;
-
-      if (selectedOrderId.value.isEmpty) {
-        selectedOrderId.value = activeOrdersList.first["_id"];
-      }
-    } catch (e) {
-      hasActiveOrder.value = false;
-    }
   }
 }

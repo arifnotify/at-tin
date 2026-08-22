@@ -1,45 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tin/controller/language_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/home_controller.dart';
+import 'package:tin/modules/home/widgets/app_loader.dart';
 import 'location_controller.dart';
 
 class LocationBottomSheet extends StatelessWidget {
-  const LocationBottomSheet({
-    super.key,
-  });
+  const LocationBottomSheet({super.key});
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<LocationController>();
-    final cartController = Get.find<CartController>(); // 👈 কার্ট চেক করার জন্য যুক্ত করা হয়েছে
+    final cartController = Get.find<CartController>();
+    final languageController = Get.find<LanguageController>();
 
     return Container(
-      height: 500,
-      padding: const EdgeInsets.all(16),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.50,
+      ),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        color: Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // =====================
-          // TITLE
+          // DRAG HANDLE & HEADER
           // =====================
-          const Text(
-            "Select Location",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-
-          const SizedBox(
-            height: 20,
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Obx(() => Text(
+                      languageController.isBangla
+                          ? "ডেলিভারি লোকেশন সিলেক্ট করুন"
+                          : "Select Delivery Location",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    )),
+                InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: () => Get.back(),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, size: 16, color: Colors.black54),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
           // =====================
           // LOCATION LIST
@@ -47,171 +78,119 @@ class LocationBottomSheet extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.locations.isEmpty) {
+                // এখানে CircularProgressIndicator এর জায়গায় AppLoader বসানো হয়েছে
                 return const Center(
-                  child: CircularProgressIndicator(),
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: AppLoader(),
+                  ),
                 );
               }
 
               if (controller.locations.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    "No location found",
+                    languageController.isBangla ? "কোনো লোকেশন পাওয়া যায়নি" : "No locations available",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 );
               }
 
               return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                physics: const BouncingScrollPhysics(),
                 itemCount: controller.locations.length,
                 itemBuilder: (context, index) {
                   final location = controller.locations[index];
                   final isSelected = controller.currentLocationId == location.id;
+                  final isBangla = languageController.isBangla;
 
-                  return Card(
-                    elevation: isSelected ? 3 : 0,
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.deepPurple.shade50.withOpacity(0.6) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? Colors.deepPurple : Colors.grey.shade200,
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                    ),
                     child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isSelected
-                            ? Colors.deepPurple
-                            : Colors.grey.shade200,
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      leading: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.deepPurple : Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
                         child: Icon(
-                          Icons.location_on,
-                          color: isSelected ? Colors.white : Colors.grey,
+                          Icons.location_on_rounded,
+                          color: isSelected ? Colors.white : Colors.grey.shade600,
+                          size: 18,
                         ),
                       ),
                       title: Text(
-                        location.district,
+                        isBangla ? location.district.bn : location.district.en,
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Colors.deepPurple : const Color(0xFF0F172A),
                         ),
                       ),
                       subtitle: Text(
-                        location.division,
+                        isBangla ? location.division.bn : location.division.en,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            "৳${location.deliveryCharge}",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (isSelected)
-                            const Text(
-                              "Selected",
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontSize: 11,
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                "৳${location.deliveryCharge}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
+                              Text(
+                                isBangla ? "ডেলিভারি" : "Delivery",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isSelected) ...[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: Colors.deepPurple,
+                              size: 18,
                             ),
+                          ],
                         ],
                       ),
                       onTap: () async {
-                        // একই লোকেশন হলে ডায়ালগ বা কোনো অ্যাকশনের প্রয়োজন নেই
                         if (isSelected) {
                           Get.back();
                           return;
                         }
 
-                        // কার্টে প্রোডাক্ট থাকলে ডায়ালগ পপ-আপ হবে
                         if (cartController.cartItems.isNotEmpty) {
-                          Get.back(); // বটম শিট বন্ধ করুন
-
-Get.dialog(
-  Dialog(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(4), // একদম হালকা কার্ভ, ছবির মতো প্রফেশনাল লুকের জন্য
-    ),
-    backgroundColor: Colors.white,
-    child: Container(
-      // স্ক্রিনের উইডথ অনুযায়ী ডায়ালগের সর্বোচ্চ সাইজ কন্ট্রোল করার জন্য
-      constraints: const BoxConstraints(maxWidth: 320), 
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16), // স্ট্যান্ডার্ড মিনিমাল প্যাডিং
-      child: Column(
-        mainAxisSize: MainAxisSize.min, // ভেতরের কন্টেন্ট যতটুকু, ঠিক ততটুকুই হাইট নেবে
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ডায়ালগ টাইটেল
-          const Text(
-            "Clear Cart?",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          // ডায়ালগ বডি মেসেজ
-          const Text(
-            "Changing location will clear your current cart items. Do you want to proceed?",
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54, // হালকা অ্যাশ কালার টেক্সট
-              height: 1.3, // লাইনের মাঝে সুন্দর গ্যাপের জন্য
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // বাটনস (NO এবং YES অপশন)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // ক্যান্সেল বাটন
-              TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () => Get.back(),
-                child: const Text(
-                  "NO",
-                  style: TextStyle(
-                    color: Colors.deepPurple, // অথবা আপনার থিম কালার
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              
-              // কনফার্ম বাটন
-              TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () async {
-                  Get.back(); // ডায়ালগ বন্ধ করুন
-                  await cartController.clearCart();
-                  await controller.selectLocation(location);
-                  if (Get.isRegistered<HomeController>()) {
-                    await Get.find<HomeController>().loadHomeData();
-                  }
-                },
-                child: const Text(
-                  "YES",
-                  style: TextStyle(
-                    color: Colors.deepPurple,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
-    ),
-  ),
-  barrierDismissible: false,
-);
+                          Get.back();
+                          _showClearCartDialog(context, location, controller, cartController, isBangla);
                         } else {
-                          // কার্ট খালি থাকলে কোনো ওয়ার্নিং ছাড়াই সরাসরি চেঞ্জ হবে
                           await controller.selectLocation(location);
                           Get.back();
                         }
@@ -224,6 +203,106 @@ Get.dialog(
           ),
         ],
       ),
+    );
+  }
+
+  // =====================
+  // CLEAR CART DIALOG
+  // =====================
+  void _showClearCartDialog(
+    BuildContext context,
+    dynamic location,
+    LocationController controller,
+    CartController cartController,
+    bool isBangla,
+  ) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 300),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.remove_shopping_cart_rounded, color: Colors.amber.shade800, size: 20),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isBangla ? "কার্ট খালি করবেন?" : "Clear Cart?",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                isBangla
+                    ? "লোকেশন পরিবর্তন করলে আপনার বর্তমান কার্টের প্রোডাক্টগুলো মুছে যাবে। আপনি কি এগিয়ে যেতে চান?"
+                    : "Changing location will clear your current cart items. Do you want to proceed?",
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey.shade700,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade700,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    child: Text(isBangla ? "না" : "NO", style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      minimumSize: Size.zero,
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await cartController.clearCart();
+                      await controller.selectLocation(location);
+                      if (Get.isRegistered<HomeController>()) {
+                        await Get.find<HomeController>().loadHomeData();
+                      }
+                    },
+                    child: Text(
+                      isBangla ? "হ্যাঁ" : "YES",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
     );
   }
 }

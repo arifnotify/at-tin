@@ -8,6 +8,7 @@ import 'package:tin/modules/auth/auth_binding.dart';
 import 'package:tin/modules/auth/login_page.dart';
 import 'package:tin/modules/auth/otp_page.dart';
 import 'package:tin/modules/cart/cart_screen.dart';
+import 'package:tin/modules/flash/flash_sale_page.dart';
 import 'package:tin/modules/home/category/main_categories_page.dart';
 import 'package:tin/modules/home/category/sub_category.dart';
 import 'package:tin/modules/home/home_screen.dart';
@@ -85,6 +86,10 @@ class AppPages {
       page: () => SearchScreen(),
       binding: SearchBinding(),
     ),
+ GetPage(
+      name: AppRoutes.flashSale,
+      page: () => const FlashSalePage(),
+    ),
 
     GetPage(
       name: AppRoutes.trackingOrders,
@@ -113,5 +118,6 @@ class AppPages {
         return PaymentDialog(paymentUrl: paymentUrl);
       },
     ),
+    
   ];
 }

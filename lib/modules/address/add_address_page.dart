@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:tin/controller/language_controller.dart';
-
 import 'package:tin/data/models/address_model.dart';
 import 'address_controller.dart';
 

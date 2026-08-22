@@ -137,7 +137,7 @@ class AppDrawer extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            /// ================= MENU ITEMS WITH DROPDOWN DOWN =================
+            /// ================= MENU ITEMS WITH DROPDOWN =================
             Expanded(
               child: Theme(
                 data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -145,7 +145,7 @@ class AppDrawer extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
                     
-                    /// ================= MY ORDERS =================
+                    /// ================= MY ORDERS & TRACKING COMBINED =================
                     Obx(() {
                       if (!auth.isLoggedIn.value) return const SizedBox();
 
@@ -156,65 +156,128 @@ class AppDrawer extends StatelessWidget {
                       if (orders.isEmpty) return const SizedBox();
 
                       return _buildExpansionSection(
-                        icon: Icons.receipt_long,
-                        title: isBn ? "আমার অর্ডারসমূহ" : "My Orders",
+                        icon: Icons.receipt_long_rounded,
+                        title: isBn ? "আমার অর্ডার ও ট্র্যাকিং" : "My Orders & Tracking",
                         children: orders.map<Widget>((order) {
                           final items = order["items"] ?? [];
-
                           final rawAmount = order["finalAmount"] ?? 0;
                           final formattedAmount = double.parse(rawAmount.toString()).toStringAsFixed(2);
+                          final orderStatus = order["orderStatus"]?.toString() ?? "Processing";
+                          final isSelected = orderController.selectedOrderId.value == order["_id"];
 
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: isSelected ? bgGoldenLight.withOpacity(0.6) : Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(
+                                color: isSelected ? primaryGolden.withOpacity(0.5) : Colors.grey.shade200,
+                                width: isSelected ? 1.5 : 1,
+                              ),
                             ),
                             child: ExpansionTile(
-                              leading: const CircleAvatar(
-                                backgroundColor: primaryGolden,
+                              tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              leading: CircleAvatar(
+                                backgroundColor: isSelected ? Colors.green : primaryGolden,
                                 radius: 16,
-                                child: Icon(Icons.shopping_bag, color: Colors.white, size: 16),
+                                child: Icon(
+                                  isSelected ? Icons.local_shipping : Icons.shopping_bag, 
+                                  color: Colors.white, 
+                                  size: 16,
+                                ),
                               ),
                               title: Text(
                                 isBn ? "অর্ডার #${order["orderNumber"]}" : "Order #${order["orderNumber"]}",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
-                              subtitle: Text(
-                                isBn ? "মোট: ৳$formattedAmount" : "Total: ৳$formattedAmount",
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: primaryGolden, fontSize: 12),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isBn ? "মোট: ৳$formattedAmount" : "Total: ৳$formattedAmount",
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: primaryGolden, fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      orderStatus,
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.brown),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: Icon(
+                                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  color: isSelected ? Colors.green : Colors.grey,
+                                  size: 22,
+                                ),
+                                onPressed: () async {
+                                  await orderController.selectOrder(order["_id"]);
+                                  Get.back();
+                                },
                               ),
                               children: items.map<Widget>((item) {
-                                // productName অবজেক্ট বা স্টریং হ্যান্ডেল করা
                                 final rawProductName = item["productName"];
                                 final String productNameText = (rawProductName is Map)
                                     ? (isBn ? (rawProductName["bn"] ?? rawProductName["en"] ?? "") : (rawProductName["en"] ?? ""))
                                     : (rawProductName?.toString() ?? "");
 
-                                // ইউনিট হ্যান্ডেল করা
                                 final rawUnit = item["unit"];
                                 final String unitText = (rawUnit is Map)
                                     ? (isBn ? (rawUnit["bn"] ?? rawUnit["en"] ?? "") : (rawUnit["en"] ?? ""))
                                     : (rawUnit?.toString() ?? "");
 
-                                return ListTile(
-                                  leading: ClipRRect(
+                                final qty = item["quantity"] ?? 1;
+                                final price = item["price"] ?? item["unitPrice"] ?? 0;
+                                final totalPrice = double.parse((qty * price).toString()).toStringAsFixed(2);
+                                final formattedUnitPrice = double.parse(price.toString()).toStringAsFixed(2);
+
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
                                     borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      item["productImage"] ?? "",
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 40),
-                                    ),
                                   ),
-                                  title: Text(productNameText, style: const TextStyle(fontSize: 13)),
-                                  subtitle: Text(
-                                    isBn 
-                                      ? "পরিমাণ: ${item["quantity"]} $unitText" 
-                                      : "Qty: ${item["quantity"]} $unitText", 
-                                    style: const TextStyle(fontSize: 12),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    leading: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.network(
+                                        item["productImage"] ?? "",
+                                        width: 38,
+                                        height: 38,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 38, color: Colors.grey),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      productNameText, 
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        isBn 
+                                          ? "পরিমাণ: $qty $unitText (৳$formattedUnitPrice /টি)" 
+                                          : "Qty: $qty $unitText (৳$formattedUnitPrice each)", 
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                      ),
+                                    ),
+                                    trailing: Text(
+                                      "৳$totalPrice",
+                                      style: const TextStyle(
+                                        fontSize: 12, 
+                                        fontWeight: FontWeight.bold, 
+                                        color: primaryGolden,
+                                      ),
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -224,13 +287,9 @@ class AppDrawer extends StatelessWidget {
                       );
                     }),
 
-                    /// ================= TRANSACTIONS (MAX 3 ITEMS + SEE MORE) =================
+                    /// ================= TRANSACTIONS =================
                     Obx(() {
                       if (!auth.isLoggedIn.value) return const SizedBox();
-
-                      if (rewardController.txLoading.value) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(color: primaryGolden)));
-                      }
 
                       final List<dynamic> allTx = rewardController.transactions;
                       if (allTx.isEmpty) return const SizedBox();
@@ -303,45 +362,6 @@ class AppDrawer extends StatelessWidget {
                         icon: Icons.history,
                         title: isBn ? "লেনদেন সমূহ" : "Transactions",
                         children: txWidgets,
-                      );
-                    }),
-
-                    /// ================= ORDER TRACKING =================
-                    Obx(() {
-                      if (!auth.isLoggedIn.value) return const SizedBox();
-
-                      final orderController = Get.find<OrderController>();
-                      final orders = orderController.activeOrders;
-                      final isBn = languageController.isBangla;
-
-                      final activeOrders = orders.where((order) {
-                        final status = order["orderStatus"]?.toString() ?? "";
-                        return status != "Delivered" && status != "Cancelled";
-                      }).toList();
-
-                      if (activeOrders.isEmpty) return const SizedBox();
-
-                      return _buildExpansionSection(
-                        icon: Icons.local_shipping,
-                        title: isBn ? "অর্ডার ট্র্যাকিং" : "Order Tracking",
-                        children: activeOrders.map((order) {
-                          final isSelected = orderController.selectedOrderId.value == order["_id"];
-
-                          return ListTile(
-                            leading: Icon(
-                              Icons.receipt_long,
-                              color: isSelected ? Colors.green : Colors.grey,
-                              size: 20,
-                            ),
-                            title: Text(isBn ? "অর্ডার #${order["orderNumber"]}" : "Order #${order["orderNumber"]}", style: const TextStyle(fontSize: 14)),
-                            subtitle: Text(order["orderStatus"]?.toString() ?? "", style: const TextStyle(fontSize: 12)),
-                            trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null,
-                            onTap: () async {
-                              await orderController.selectOrder(order["_id"]);
-                              Get.back();
-                            },
-                          );
-                        }).toList(),
                       );
                     }),
 

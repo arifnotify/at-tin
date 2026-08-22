@@ -9,7 +9,7 @@ class AppTheme {
     colorScheme:
         ColorScheme.fromSeed(
       seedColor:
-          Colors.blue,
+          const Color.fromARGB(255, 7, 161, 20),
     ),
   );
 }

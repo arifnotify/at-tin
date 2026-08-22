@@ -1,7 +1,8 @@
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:tin/data/services/reward_service.dart';
 
-class RewardController extends GetxController {
+class RewardController extends GetxController with WidgetsBindingObserver {
   final RewardService service = RewardService();
 
   /// ================= BALANCE =================
@@ -12,6 +13,27 @@ class RewardController extends GetxController {
   var transactions = <dynamic>[].obs;
   var txLoading = false.obs;
 
+  // ব্যাকগ্রাউন্ড থেকে রেজুম হওয়ার সময় রি-ফেচ করার জন্য আইডি ও টোকেন সেভ রাখা
+  String _lastUserId = "";
+  String _lastToken = "";
+
+  @override
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  // ==========================================================
+  // 🔄 APP RESUME SYNC (ইউজার ২-৫ ঘণ্টা পর ব্যাকগ্রাউন্ড থেকে ফিরলে)
+  // ==========================================================
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _lastUserId.isNotEmpty) {
+      print("⚡ REWARD: App resumed! Refreshing reward data...");
+      loadRewardData(_lastUserId, _lastToken);
+    }
+  }
+
   // =========================
   // LOAD BALANCE
   // =========================
@@ -19,11 +41,18 @@ class RewardController extends GetxController {
     String userId,
     String token,
   ) async {
+    _lastUserId = userId;
+    _lastToken = token;
+
     try {
       loading.value = true;
 
       final result = await service.getWalletBalance(userId, token);
-      balance.value = result;
+
+      // 💥 Safe Double Cast (ব্যাকএন্ড থেকে int পাঠালেও অ্যাপ ক্র্যাশ করবে না)
+      if (result != null) {
+        balance.value = (result as num).toDouble();
+      }
     } catch (e) {
       print("Reward Balance Error: $e");
     } finally {
@@ -32,27 +61,34 @@ class RewardController extends GetxController {
   }
 
   // =========================
-  // LOAD TRANSACTIONS
+  // LOAD TRANSACTIONS (Silent & Smooth Update)
   // =========================
   Future<void> loadTransactions(
     String userId,
     String token,
   ) async {
+    _lastUserId = userId;
+    _lastToken = token;
+
     try {
-      txLoading.value = true;
+      // কেবল যদি মেমোরিতে আগে থেকে কোনো লিস্ট না থাকে, তখনই শুধু ফার্স্ট টাইম লোডার দেখাবে।
+      if (transactions.isEmpty) {
+        txLoading.value = true;
+      }
 
       final result = await service.getTransactions(userId, token);
 
-      /// 🔥 SAFE CAST (important)
+      /// 🔥 SAFE CAST & ASSIGN
       if (result is List) {
-        transactions.value = result;
+        transactions.assignAll(result);
       } else {
-        transactions.value = [];
+        transactions.clear();
       }
-
     } catch (e) {
       print("Reward Transaction Error: $e");
-      transactions.value = [];
+      if (transactions.isEmpty) {
+        transactions.clear();
+      }
     } finally {
       txLoading.value = false;
     }
@@ -69,5 +105,11 @@ class RewardController extends GetxController {
       loadBalance(userId, token),
       loadTransactions(userId, token),
     ]);
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
   }
 }

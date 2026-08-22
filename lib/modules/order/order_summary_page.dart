@@ -7,7 +7,9 @@ import 'package:tin/modules/address/address_controller.dart';
 import 'package:tin/modules/cart/cart_controller.dart';
 import 'package:tin/modules/home/widgets/app_loader.dart';
 import 'package:tin/modules/location/location_controller.dart';
+import 'package:tin/modules/payment/payment_settings_controller.dart';
 import 'order_controller.dart';
+import 'order_confirmation_dialog.dart'; // নতুন ডায়ালগ ফাইল ইমপোর্ট করা হয়েছে
 
 class OrderSummaryPage extends StatefulWidget {
   const OrderSummaryPage({super.key});
@@ -21,25 +23,47 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
   final address = Get.put(AddressController());
   final location = Get.find<LocationController>();
   final order = Get.find<OrderController>();
+  final paymentSettings = Get.find<PaymentSettingsController>();
 
   final lang = Get.isRegistered<LanguageController>()
       ? Get.find<LanguageController>()
       : Get.put(LanguageController());
 
   final ScrollController _addressScrollController = ScrollController();
-  final RxString selectedPaymentMethod = 'COD'.obs;
+  final RxString selectedPaymentMethod=''.obs;
 
-  final Color bgCream = const Color(0xFFF7F4EB);
-  final Color cardColor = const Color(0xFFFCFAF2);
+// ব্যাকগ্রাউন্ড সম্পূর্ণ সাদা করা হয়েছে
+  final Color bgCream = Colors.white;
+  final Color cardColor = Colors.white;
   final Color accentGold = const Color(0xFFD4AF37);
   final Color darkGreen = const Color(0xFF1D4D33);
   final Color textDark = const Color(0xFF2C2520);
 
-  @override
-  void initState() {
-    super.initState();
-    order.loadRewardWallet();
-  }
+@override
+void initState() {
+  super.initState();
+
+  order.loadRewardWallet();
+
+  paymentSettings.fetchPaymentSettings();
+
+  Future.delayed(
+    const Duration(milliseconds: 300),
+    () {
+
+      if (paymentSettings.codEnabled.value) {
+
+        selectedPaymentMethod.value = "COD";
+
+      } else if (paymentSettings.sslcommerzEnabled.value) {
+
+        selectedPaymentMethod.value = "SSLCOMMERZ";
+
+      }
+
+    },
+  );
+}
 
   @override
   void dispose() {
@@ -47,7 +71,6 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     super.dispose();
   }
 
-  // ইংরেজি সংখ্যাকে বাংলায় কনভার্ট করার ইউটিলিটি
   String _toBnNum(String number) {
     if (!lang.isBangla) return number;
     const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -66,7 +89,6 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
         : 0;
   }
 
-  // ১. রিওয়ার্ড শুধুমাত্র Subtotal-এর ওপর কাজ করবে (Delivery Charge অন্তর্ভুক্ত নয়)
   double getMaxDiscount() => getSubtotal();
 
   double getReward() {
@@ -87,7 +109,6 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     order.rewardAmount.value = newAmount > maxAllowed ? maxAllowed : newAmount;
   }
 
-  // ২. Subtotal থেকে Reward বাদ দিয়ে ডেলিভারি চার্জ সম্পূর্ণ যোগ করা হচ্ছে
   double getTotal() {
     double subtotalAfterReward = (getSubtotal() - getReward()).clamp(0, double.infinity);
     return subtotalAfterReward + getDelivery();
@@ -97,6 +118,27 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     await order.placeOrder(
       addressId,
       paymentMethod: selectedPaymentMethod.value,
+    );
+  }
+
+  // আলাদা ফাইল থেকে পপ-আপ কল করার মেথড
+  void _openConfirmationPopup(BuildContext context, dynamic selectedAddr) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return OrderConfirmationDialog(
+          selectedAddr: selectedAddr,
+          paymentMethod: selectedPaymentMethod.value,
+          subtotal: getSubtotal(),
+          rewardDiscount: getReward(),
+          deliveryCharge: getDelivery(),
+          total: getTotal(),
+          onConfirm: () {
+            _handlePlaceOrder(selectedAddr.id);
+          },
+        );
+      },
     );
   }
 
@@ -307,9 +349,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  if (address.isLoading.value)
-                                    const Expanded(child: Center(child: AppLoader()))
-                                  else if (address.addresses.isEmpty)
+                                  if (address.addresses.isEmpty && !address.isLoading.value)
                                     Expanded(
                                       child: Center(
                                         child: Text(
@@ -411,6 +451,18 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                                       itemCount: cart.cartItems.length,
                                       itemBuilder: (context, index) {
                                         final item = cart.cartItems[index];
+
+                                        // ইউনিট বের করার লজিক
+                                        dynamic unitValue;
+                                        try {
+                                          unitValue = (item as dynamic).unit ?? (item as dynamic).unitValue ?? (item as dynamic).weight;
+                                        } catch (_) {
+                                          unitValue = null;
+                                        }
+                                        String unitText = unitValue != null && unitValue.toString().isNotEmpty 
+                                            ? " (${unitValue.toString()})" 
+                                            : "";
+
                                         return Padding(
                                           padding: const EdgeInsets.only(bottom: 6.0),
                                           child: Row(
@@ -431,7 +483,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      item.localizedTitle,
+                                                      "${item.localizedTitle}$unitText",
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: textDark),
@@ -513,10 +565,8 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                                         activeColor: accentGold,
                                         value: order.useReward.value,
                                         onChanged: (v) {
-                                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                                            order.useReward.value = v;
-                                            order.rewardAmount.value = v ? maxAllowedReward : 0;
-                                          });
+                                          order.useReward.value = v;
+                                          order.rewardAmount.value = v ? maxAllowedReward : 0;
                                         },
                                       ),
                                     ),
@@ -566,29 +616,84 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                         children: [
                           _sectionHeader(lang.isBangla ? "৪. পেমেন্ট পদ্ধতি" : "4. Select Payment Method"),
                           const SizedBox(height: 8),
-                          Obx(() {
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: _paymentMethodButton(
-                                    label: lang.isBangla ? "ক্যাশ অন ডেলিভারি" : "Cash on Delivery",
-                                    type: "COD",
-                                    iconData: Icons.local_shipping,
-                                    isSelected: selectedPaymentMethod.value == 'COD',
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _paymentMethodButton(
-                                    label: lang.isBangla ? "অনলাইন পেমেন্ট" : "Online Payment",
-                                    type: "SSLCOMMERZ",
-                                    iconData: Icons.payment,
-                                    isSelected: selectedPaymentMethod.value == 'SSLCOMMERZ',
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
+Obx(() {
+
+  if (!paymentSettings.codEnabled.value &&
+      !paymentSettings.sslcommerzEnabled.value) {
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius:
+            BorderRadius.circular(10),
+      ),
+      child: const Text(
+        "No payment method available",
+        style: TextStyle(
+          color: Colors.red,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  if (paymentSettings.codEnabled.value &&
+      !paymentSettings.sslcommerzEnabled.value &&
+      selectedPaymentMethod.value !=
+          "COD") {
+
+    selectedPaymentMethod.value =
+        "COD";
+  }
+
+  if (!paymentSettings.codEnabled.value &&
+      paymentSettings.sslcommerzEnabled.value &&
+      selectedPaymentMethod.value !=
+          "SSLCOMMERZ") {
+
+    selectedPaymentMethod.value =
+        "SSLCOMMERZ";
+  }
+
+  return Row(
+    children: [
+
+      if (paymentSettings.codEnabled.value)
+        Expanded(
+          child: _paymentMethodButton(
+            label: lang.isBangla
+                ? "ক্যাশ অন ডেলিভারি"
+                : "Cash on Delivery",
+            type: "COD",
+            iconData:
+                Icons.local_shipping,
+            isSelected:
+                selectedPaymentMethod.value ==
+                    "COD",
+          ),
+        ),
+
+      if (paymentSettings.codEnabled.value &&
+          paymentSettings.sslcommerzEnabled.value)
+        const SizedBox(width: 8),
+
+      if (paymentSettings.sslcommerzEnabled.value)
+        Expanded(
+          child: _paymentMethodButton(
+            label: lang.isBangla
+                ? "অনলাইন পেমেন্ট"
+                : "Online Payment",
+            type: "SSLCOMMERZ",
+            iconData: Icons.payment,
+            isSelected:
+                selectedPaymentMethod.value ==
+                    "SSLCOMMERZ",
+          ),
+        ),
+    ],
+  );
+}),
                           const SizedBox(height: 10),
                           const Divider(),
                           const SizedBox(height: 4),
@@ -663,7 +768,8 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                                 );
                                 return;
                               }
-                              _handlePlaceOrder(selectedAddr.id);
+                              // কনফার্মেশন পপ-আপ কল
+                              _openConfirmationPopup(context, selectedAddr);
                             },
                       child: order.isLoading.value
                           ? const AppLoader()

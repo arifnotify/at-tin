@@ -1,17 +1,20 @@
 class BannerModel {
   final String id;
-
   final String title;
-
   final String image;
 
-  final String link;
+  // Banner click করলে কোথায় যাবে
+  final String linkType;
+
+  // Product / Flash Sale / Category ID
+  final String? linkId;
 
   BannerModel({
     required this.id,
     required this.title,
     required this.image,
-    required this.link,
+    required this.linkType,
+    this.linkId,
   });
 
   factory BannerModel.fromJson(
@@ -19,12 +22,20 @@ class BannerModel {
   ) {
     return BannerModel(
       id: json["_id"] ?? "",
-
       title: json["title"] ?? "",
-
       image: json["image"] ?? "",
-
-      link: json["link"] ?? "",
+      linkType: json["linkType"] ?? "none",
+      linkId: json["linkId"]?.toString(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "_id": id,
+      "title": title,
+      "image": image,
+      "linkType": linkType,
+      "linkId": linkId,
+    };
   }
 }

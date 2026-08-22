@@ -17,7 +17,7 @@ class SplashScreen extends StatelessWidget {
             ),
             SizedBox(height: 20),
             Text(
-              "at tin",
+              "Mach Bhat",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
